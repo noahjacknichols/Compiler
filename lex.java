@@ -20,6 +20,50 @@ class token {
 	}
 }
 
+class symbol {
+	public token symbolToken;
+	public int id;
+	public symbol(token tok, int ID) {symbolToken = tok; id = ID;}
+
+	public token getSymbolToken() {
+		return symbolToken;
+	}
+	public int getSymbolID(){
+		return id;
+	}
+	@Override
+	public boolean equals(Object o){
+		if(this == o){
+			return true;
+		}
+		if(o == null || getClass() != o.getClass()){
+			return false;
+		}
+		symbol oSymbol = (symbol) o;
+		return symbolToken == oSymbol.symbolToken && id == oSymbol.id;
+		}
+}
+class symbolTable {
+	int counter;
+	private  ArrayList<symbol> symbols = new ArrayList<symbol>();
+	public symbolTable(){
+		counter = 0;
+	}
+
+	public void addSymbol(symbol sy){
+		symbols.add(sy);
+	}
+
+	public Boolean contains(symbol sy){
+		for (symbol tableInd : symbols){
+			if(sy == tableInd){
+				return true;
+			}
+		}
+		return false;
+	}
+}
+
 
 
 public class lex{
@@ -34,11 +78,8 @@ public class lex{
 		while((ch = System.in.read()) != -1){
 			if(ch != '.'){
 				getNextToken((char)ch);
-			}else {
 				//reached EOF
-				return 0;
 			}
-
 		}
 	}
 	//48-59 ASCII 0-9
@@ -46,13 +87,21 @@ public class lex{
 		return (c >= 48 && c<=57);
 
 	}
-	//97-122 ASCII a-z
+	//97-122 ASCII a-Z
 	private static boolean isLetter(char c){
 		return (c >= 97 && c<=57);
 	}
 	 private static void getNextToken(char c){
 		System.out.print(c);
-		while(WHITESPACE.contains(c){
+		if(WHITESPACE.contains(c)){
+			return; 
+		}
+
+		if(isDigit(c)){
+			//get the number
+		}else if(isLetter(c)){
+			//get the word, compare to reserved / symbol table
+		}
 			
 			
 	}
