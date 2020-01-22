@@ -4,19 +4,19 @@ import java.util.*;
 
 class token {
 	public String type;
-	public String name;
-	public token(String n, String t) {name = n; type = t;}
-	public token(char n, String t) { name = String.valueOf(n); type = t;}
+	public String value;
+	public token(String n, String t) {value = n; type = t;}
+	public token(char n, String t) { value = String.valueOf(n); type = t;}
 
 	public String  getString() {
-		return "<"+ name + ">";
+		return "<"+ value + "," + type +">";
 	}
 
 	public String getType() {
 		return type;
 	}
 	public String getName() {
-		return name;
+		return value;
 	}
 }
 
@@ -50,8 +50,14 @@ class symbolTable {
 		counter = 0;
 	}
 
-	public void addSymbol(symbol sy){
-		symbols.add(sy);
+	public void addSymbol(token tk){
+		symbols.add(new symbol(tk, counter));
+		counter++;
+	}
+	public void init(List<String> initials){
+		for (String term : initials){		
+			this.addSymbol(new token(term, "TERMINAL"));
+		}
 	}
 
 	public Boolean contains(symbol sy){
@@ -62,15 +68,27 @@ class symbolTable {
 		}
 		return false;
 	}
+	public int index(symbol sy){
+		int count = 0;
+		for (symbol tableInd: symbols){
+			if(sy == tableInd){
+				return count;
+			}
+			count++;
+		}
+		return -1;
+	}
 }
 
 
 
 public class lex{
-	private static final List<String> RESERVED = Arrays.asList("if","fi","then","do", "od", "def", "fed", "int", "double", "print", "return", "or", "and", "not");
+	private static final List<String> RESERVED = Arrays.asList("if","fi","then","else","do", "od", "def", "fed", "int", "double", "print", "return", "or", "and", "not", "while");
 	private static final List<Character> TERMINALS = Arrays.asList(';',',','(',')','[',']','+','-', '*','/','%','.','=','>','<');
 	private static final List<Character> WHITESPACE = Arrays.asList(' ', '\n','\t');
 	private char end = '.';
+	private symbolTable symTable = new symbolTable();
+	symTable.init(RESERVED);
 //read in info
 	public static void main(String args[]) throws IOException {
 		int ch;
@@ -84,6 +102,7 @@ public class lex{
 	}
 	//48-59 ASCII 0-9
 	private static boolean isDigit(char c){
+		
 		return (c >= 48 && c<=57);
 
 	}
@@ -91,17 +110,58 @@ public class lex{
 	private static boolean isLetter(char c){
 		return (c >= 97 && c<=57);
 	}
-	 private static void getNextToken(char c){
+	private static boolean isTerminal(char c){
+		if(TERMINALS.contains(c)){
+			return true;
+		}
+		return false;
+	}
+	private static char readNextChar() throws IOException {
+		return (char) System.in.read();
+	}
+	 private static token getNextToken(char c) throws IOException{
 		System.out.print(c);
 		if(WHITESPACE.contains(c)){
-			return; 
+			c = readNextChar();
+		}
+		switch(c){
+			case '=':
+				c = readNextChar();
+				if(c == '=') return new token("==", "COMPARATOR");
+				else return new token("=", "TERMINAL");
+			case '<':
+				c = readNextChar();
+				if(c == '=') return new token("<=", "COMPARATOR");
+				else if(c == '>') return new token("<>", "COMPARATOR");
+				else return new token("=", "TERMINAL");
+			case '>':
+				c = readNextChar();
+				if(c == '=') return new token(">=", "COMPARATOR");
+				else return new token("=", "TERMINAL");
 		}
 
 		if(isDigit(c)){
-			//get the number
+			//continue reading until no longer number
+			String digitBuffer = "";
+			while(isDigit(c)){
+				digitBuffer = digitBuffer + c;
+				c = readNextChar();
+			}
+			if(c != 'E' && c != 'e' && isLetter(c)){
+				//Invalid Integer
+				return new token(digitBuffer, "ERROR");
+			}else if(c != '.'){
+				//its not a floating point number
+
+			}
 		}else if(isLetter(c)){
 			//get the word, compare to reserved / symbol table
+		} else if(isTerminal(c)){
+			//figure out terminal
 		}
+		token tok = new token(c, "ERROR");
+		return tok;
+		
 			
 			
 	}
