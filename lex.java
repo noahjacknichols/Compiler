@@ -89,7 +89,7 @@ class symbolTable {
 	public int index(String name) {
 		int count = 0;
 		for (final symbol tableInd : symbols) {
-			if (name == tableInd.getSymbolToken().getName()) {
+			if (name.compareTo(tableInd.getSymbolToken().getName())== 0) {
 				return count;
 			}
 			count++;
@@ -148,26 +148,30 @@ public class lex {
 		}
 		switch(c){
 			case '=':
+				System.in.mark(10000);
 				c = readNextChar();
 				if(c == '=') return new token("==", "COMPARATOR");
-				else return new token("=", "TERMINAL");
+				else System.in.reset();return new token("=", "TERMINAL");
 			case '<':
+				System.in.mark(10000);
 				c = readNextChar();
 				if(c == '=') return new token("<=", "COMPARATOR");
 				else if(c == '>') return new token("<>", "COMPARATOR");
-				else return new token("=", "TERMINAL");
+				else System.in.reset();return new token("=", "TERMINAL");
 			case '>':
+				System.in.mark(10000);
 				c = readNextChar();
 				if(c == '=') return new token(">=", "COMPARATOR");
-				else return new token("=", "TERMINAL");
+				else System.in.reset();return new token("=", "TERMINAL");
 		}
 
 		if(isDigit(c)){
-			System.out.println("isDigit");
+			System.out.println("isDigit")
 			//continue reading until no longer number
 			String digitBuffer = "";
 			while(isDigit(c)){
 				digitBuffer = digitBuffer + c;
+				System.in.mark(10000);
 				c = readNextChar();
 			}
 			// System.out.println("digit:" + digitBuffer);
@@ -179,31 +183,33 @@ public class lex {
 			}else if(c != '.'){
 				//its not a floating point number, and is valid
 				symTable.addSymbol(new token(digitBuffer, "INTEGER"));
+				System.in.reset();
 				return new token(digitBuffer, "INTEGER");
 			}else if(c == '.'){
 				digitBuffer = digitBuffer + c;
 				c = readNextChar();
 				while(isDigit(c)){
 					digitBuffer = digitBuffer + c;
+					System.in.mark(10000);
 					c = readNextChar();
 				}
 				if(c != 'E' && c!='e' && isLetter(c)){
 					return new token(digitBuffer, "ERROR");
 				}
 				else {
+					System.in.reset();
 					return new token(digitBuffer, "FLOAT");
 				}
 
-			}else{
-				return new token(digitBuffer, "INTEGER");
 			}
-
+		
 		}else if(isLetter(c)){
 			System.out.println("isLetter");
 			//get the word, compare to reserved / symbol table
 			String wordBuffer = "";
 			while(isLetter(c) || isDigit(c)){
 				wordBuffer = wordBuffer + c;
+				System.in.mark(10000);
 				c = readNextChar();
 				// System.out.print(c);
 			}
@@ -211,12 +217,16 @@ public class lex {
 				//new id
 				token tk = new token(wordBuffer, "VARIABLE");
 				symTable.addSymbol(tk);
+				System.in.reset();
 				return tk;
 			} else{
 				int index = symTable.index(wordBuffer);
+				// System.out.println("index is:" + index);
 				if(index < RESERVED.size()){
+					System.in.reset();
 					return new token(wordBuffer, "RESERVED");
 				}else{
+					System.in.reset();
 					return new token(wordBuffer, "VARIABLE");
 				}
 
@@ -228,7 +238,7 @@ public class lex {
 			}else {
 				return new token(c, "TERMINAL");
 			}
-		}
+		} 
 		final token tok = new token(c, "ENDOFFUNC");
 		return tok;
 		
