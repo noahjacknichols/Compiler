@@ -77,19 +77,19 @@ class symbolTable {
 		}
 	}
 
-	public Boolean contains(final symbol sy) {
+	public Boolean contains(String name) {
 		for (final symbol tableInd : symbols) {
-			if (sy == tableInd) {
+			if (name.compareTo(tableInd.getSymbolToken().getName()) == 0) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	public int index(final symbol sy) {
+	public int index(String name) {
 		int count = 0;
 		for (final symbol tableInd : symbols) {
-			if (sy == tableInd) {
+			if (name == tableInd.getSymbolToken().getName()) {
 				return count;
 			}
 			count++;
@@ -112,10 +112,8 @@ public class lex {
 		symTable.init(RESERVED);
 		System.out.println("processing:");
 		while ((ch = System.in.read()) != -1) {
-			if (ch != '.') {
-				getNextToken((char) ch, symTable);
+				System.out.println(getNextToken((char) ch, symTable).getString());
 				// reached EOF
-			}
 		}
 	}
 
@@ -128,7 +126,7 @@ public class lex {
 
 	// 97-122 ASCII a-Z
 	private static boolean isLetter(final char c) {
-		return (c >= 97 && c <= 57);
+		return (c >= 97 && c <= 122);
 	}
 
 	private static boolean isTerminal(final char c) {
@@ -143,9 +141,9 @@ public class lex {
 	}
 
 	private static token getNextToken(char c, symbolTable symTable) throws IOException{
-		System.out.print(c);
+		System.out.println("c:" +(char) c);
 		
-		if(WHITESPACE.contains(c)){
+		while(WHITESPACE.contains((char) c)){
 			c = readNextChar();
 		}
 		switch(c){
@@ -165,26 +163,73 @@ public class lex {
 		}
 
 		if(isDigit(c)){
+			System.out.println("isDigit");
 			//continue reading until no longer number
 			String digitBuffer = "";
 			while(isDigit(c)){
 				digitBuffer = digitBuffer + c;
 				c = readNextChar();
 			}
+			// System.out.println("digit:" + digitBuffer);
+			// System.out.println("c is now:" + (char) c);
 			if(c != 'E' && c != 'e' && isLetter(c)){
 				//Invalid Integer
-				return new token(digitBuffer, "ERROR");
+				// System.out.println("I shouldn't be here");
+				return new token(digitBuffer+c, "ERROR");
 			}else if(c != '.'){
 				//its not a floating point number, and is valid
 				symTable.addSymbol(new token(digitBuffer, "INTEGER"));
+				return new token(digitBuffer, "INTEGER");
+			}else if(c == '.'){
+				digitBuffer = digitBuffer + c;
+				c = readNextChar();
+				while(isDigit(c)){
+					digitBuffer = digitBuffer + c;
+					c = readNextChar();
+				}
+				if(c != 'E' && c!='e' && isLetter(c)){
+					return new token(digitBuffer, "ERROR");
+				}
+				else {
+					return new token(digitBuffer, "FLOAT");
+				}
 
+			}else{
+				return new token(digitBuffer, "INTEGER");
+			}
 
 		}else if(isLetter(c)){
+			System.out.println("isLetter");
 			//get the word, compare to reserved / symbol table
-		} else if(isTerminal(c)){
+			String wordBuffer = "";
+			while(isLetter(c) || isDigit(c)){
+				wordBuffer = wordBuffer + c;
+				c = readNextChar();
+				// System.out.print(c);
+			}
+			if(symTable.contains(wordBuffer) == false){
+				//new id
+				token tk = new token(wordBuffer, "VARIABLE");
+				symTable.addSymbol(tk);
+				return tk;
+			} else{
+				int index = symTable.index(wordBuffer);
+				if(index < RESERVED.size()){
+					return new token(wordBuffer, "RESERVED");
+				}else{
+					return new token(wordBuffer, "VARIABLE");
+				}
+
+			}
+		} else if(TERMINALS.contains(c)){
 			//figure out terminal
+			if(c == '.'){
+				return new token(c, "END");
+			}else {
+				return new token(c, "TERMINAL");
+			}
 		}
-		final token tok = new token(c, "ERROR");
+		final token tok = new token(c, "ENDOFFUNC");
 		return tok;
 		
 			
