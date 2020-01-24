@@ -103,20 +103,47 @@ public class lex {
 			"int", "double", "print", "return", "or", "and", "not", "while");
 	private static final List<Character> TERMINALS = Arrays.asList(';', ',', '(', ')', '[', ']', '+', '-', '*', '/',
 			'%', '.', '=', '>', '<');
-	private static final List<Character> WHITESPACE = Arrays.asList(' ', '\n', '\t');
+	private static final List<Character> WHITESPACE = Arrays.asList(' ', '\n', '\t', '\f','\r');
 
 	// read in info
 	public static void main(final String args[]) throws IOException {
 		int ch;
 		symbolTable symTable = new symbolTable();
 		symTable.init(RESERVED);
+		token temp_tk;
+		ArrayList<token> allTokens = new ArrayList<token>();
 		System.out.println("processing:");
 		while ((ch = System.in.read()) != -1) {
-				System.out.println(getNextToken((char) ch, symTable).getString());
+				temp_tk = getNextToken((char) ch, symTable);
+				System.out.println(temp_tk);
+				allTokens.add(temp_tk);
 				// reached EOF
 		}
+		encodeHTML(allTokens);
 	}
 
+	private static void encodeHTML(ArrayList<token> tk){
+		String header = "<!DOCTYPE html>\n<html>\n";
+
+		String comment = "<!--\n";
+		for (token tkInd: tk){
+			comment = comment + tkInd.getString();
+		}
+		comment = comment + "\n-->";
+
+		String body = "<body>\n";
+		for (token tkInd: tk){
+			body = body +getColorP(tkInd);
+		}
+
+	}
+	private static String getColorP(token tk){
+		switch(tk.getType()){
+			case "ERROR":
+				return "<p>";
+		}
+		return "";
+	}
 	// 48-59 ASCII 0-9
 	private static boolean isDigit(final char c) {
 
@@ -141,9 +168,10 @@ public class lex {
 	}
 
 	private static token getNextToken(char c, symbolTable symTable) throws IOException{
-		System.out.println("c:" +(char) c);
+		// System.out.println("c:" +(char) c);
 		
-		while(WHITESPACE.contains((char) c)){
+		while(WHITESPACE.contains( c)){
+			// System.in.mark(10000);
 			c = readNextChar();
 		}
 		switch(c){
@@ -157,16 +185,16 @@ public class lex {
 				c = readNextChar();
 				if(c == '=') return new token("<=", "COMPARATOR");
 				else if(c == '>') return new token("<>", "COMPARATOR");
-				else System.in.reset();return new token("=", "TERMINAL");
+				else System.in.reset();return new token("<", "TERMINAL");
 			case '>':
 				System.in.mark(10000);
 				c = readNextChar();
 				if(c == '=') return new token(">=", "COMPARATOR");
-				else System.in.reset();return new token("=", "TERMINAL");
+				else System.in.reset();return new token(">", "TERMINAL");
 		}
 
 		if(isDigit(c)){
-			System.out.println("isDigit")
+			// System.out.println("isDigit");
 			//continue reading until no longer number
 			String digitBuffer = "";
 			while(isDigit(c)){
@@ -204,7 +232,7 @@ public class lex {
 			}
 		
 		}else if(isLetter(c)){
-			System.out.println("isLetter");
+			// System.out.println("isLetter");
 			//get the word, compare to reserved / symbol table
 			String wordBuffer = "";
 			while(isLetter(c) || isDigit(c)){
@@ -233,13 +261,16 @@ public class lex {
 			}
 		} else if(TERMINALS.contains(c)){
 			//figure out terminal
+			// System.out.println("isTerminal");
 			if(c == '.'){
+				// System.in.reset();
 				return new token(c, "END");
 			}else {
+				// System.in.reset();
 				return new token(c, "TERMINAL");
 			}
 		} 
-		final token tok = new token(c, "ENDOFFUNC");
+		final token tok = new token(c, "NON_PARSEABLE");
 		return tok;
 		
 			
