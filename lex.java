@@ -112,10 +112,10 @@ public class lex {
 		symTable.init(RESERVED);
 		token temp_tk;
 		ArrayList<token> allTokens = new ArrayList<token>();
-		System.out.println("processing:");
+		// System.out.println("processing:");
 		while ((ch = System.in.read()) != -1) {
 				temp_tk = getNextToken((char) ch, symTable);
-				System.out.println(temp_tk);
+				// System.out.println(temp_tk.getString());
 				allTokens.add(temp_tk);
 				// reached EOF
 		}
@@ -133,14 +133,34 @@ public class lex {
 
 		String body = "<body>\n";
 		for (token tkInd: tk){
-			body = body +getColorP(tkInd);
+			body = body +getColorP(tkInd) + "";
 		}
-
+		System.out.print(header + body + comment);
 	}
 	private static String getColorP(token tk){
 		switch(tk.getType()){
 			case "ERROR":
-				return "<p>";
+				return "<font color=\"red\">" + tk.getName()+"</font>";
+			case "VARIABLE":
+				return "<font color=\"purple\">" + tk.getName()+"</font>";	
+			case "COMPARATOR":
+				return "<font color=\"black\">" + tk.getName()+"</font>";	
+			case "TERMINAL":
+				return "<font color=\"green\">" + tk.getName()+"</font>";	
+			case "RESERVED":
+				return "<font color=\"blue\">" + tk.getName()+"</font>";	
+			case "END":
+				return "<font color=\"black\">" + tk.getName()+"</font></p>";	
+			case "INTEGER":
+				return "<font color=\"orange\">" + tk.getName()+"</font>";	
+			case "FLOAT":
+				return "<font color=\"brown\">" + tk.getName()+"</font>";	
+			case "SPACE":
+				return " ";
+			case "TAB":
+				return "    ";
+			case "NEWLINE":
+				return "</p>\n<p>";
 		}
 		return "";
 	}
@@ -170,9 +190,18 @@ public class lex {
 	private static token getNextToken(char c, symbolTable symTable) throws IOException{
 		// System.out.println("c:" +(char) c);
 		
-		while(WHITESPACE.contains( c)){
+		if(WHITESPACE.contains(c)){
 			// System.in.mark(10000);
-			c = readNextChar();
+			// System.out.println("found whitespace");
+			if(c == '\n' || c == '\r'){
+				return new token("\n", "NEWLINE");
+
+			}else if(c == '\t'){
+				return new token("\t", "TAB");
+			}else{
+				return new token(" ", "SPACE");
+			}
+			// c = readNextChar();
 		}
 		switch(c){
 			case '=':
