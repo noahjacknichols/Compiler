@@ -127,7 +127,11 @@ public class lex {
 
 		String comment = "<!--\n";
 		for (token tkInd: tk){
-			comment = comment + tkInd.getString();
+			
+			if(tkInd.getType().compareTo("NEWLINE") != 0 || tkInd.getType().compareTo("SPACE") != 0){
+				System.out.println("token is:" + tkInd.getType());
+				comment = comment + tkInd.getString();
+			}
 		}
 		comment = comment + "\n-->";
 
