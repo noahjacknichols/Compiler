@@ -123,7 +123,7 @@ public class lex {
 	}
 
 	private static void encodeHTML(ArrayList<token> tk){
-		String header = "<!DOCTYPE html>\n<html>\n";
+		String header = "<!DOCTYPE html>\n<html>\n<style>body{\nbackground-color: #050505;}\n</style>\n";
 
 		String comment = "<!--\n";
 		for (token tkInd: tk){
@@ -132,27 +132,37 @@ public class lex {
 		comment = comment + "\n-->";
 
 		String body = "<body>\n";
+		boolean onError = false;
 		for (token tkInd: tk){
-			body = body +getColorP(tkInd) + "";
+			if(tkInd.getType().compareTo("ERROR") == 0){
+				onError = true;
+			}else if(tkInd.getType().compareTo("NEWLINE") == 0 || tkInd.getName().compareTo(";") == 0){
+            	onError= false;
+			}
+			body = body +getColorP(tkInd, onError) + "";
 		}
 		System.out.print(header + body + comment);
 	}
-	private static String getColorP(token tk){
+	private static String getColorP(token tk, boolean onError){
+		String color = "red";	
+		if(onError == true){
+			return "<font color=\"red\"><bold>" + tk.getName() +"</bold></font>";
+		}
 		switch(tk.getType()){
 			case "ERROR":
-				return "<font color=\"red\">" + tk.getName()+"</font>";
+				return "<font color=\"#c50000\">" + tk.getName()+"</font>";
 			case "VARIABLE":
-				return "<font color=\"purple\">" + tk.getName()+"</font>";	
+				return "<font color=\"#edc951\">" + tk.getName()+"</font>";	
 			case "COMPARATOR":
-				return "<font color=\"black\">" + tk.getName()+"</font>";	
+				return "<font color=\"white\">" + tk.getName()+"</font>";	
 			case "TERMINAL":
-				return "<font color=\"green\">" + tk.getName()+"</font>";	
+				return "<font color=\"#eb6841\">" + tk.getName()+"</font>";	
 			case "RESERVED":
-				return "<font color=\"blue\">" + tk.getName()+"</font>";	
+				return "<font color=\"#087e8b\">" + tk.getName()+"</font>";	
 			case "END":
-				return "<font color=\"black\">" + tk.getName()+"</font></p>";	
+				return "<font color=\"white\">" + tk.getName()+"</font></p>";	
 			case "INTEGER":
-				return "<font color=\"orange\">" + tk.getName()+"</font>";	
+				return "<font color=\"#00a0b0\">" + tk.getName()+"</font>";	
 			case "FLOAT":
 				return "<font color=\"brown\">" + tk.getName()+"</font>";	
 			case "SPACE":
@@ -160,7 +170,7 @@ public class lex {
 			case "TAB":
 				return "    ";
 			case "NEWLINE":
-				return "</p>\n<p>";
+				return "</p><p>";
 		}
 		return "";
 	}
@@ -243,6 +253,7 @@ public class lex {
 				System.in.reset();
 				return new token(digitBuffer, "INTEGER");
 			}else if(c == '.'){
+				//fix this garbage tmrw
 				digitBuffer = digitBuffer + c;
 				c = readNextChar();
 				while(isDigit(c)){
