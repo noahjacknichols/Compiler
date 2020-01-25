@@ -16,6 +16,17 @@ class token {
 	}
 
 	public String getString() {
+		if(this.getName().compareTo(",") == 0){
+			return "<COMMA>";
+		}else if(this.getName().compareTo("(") == 0){
+			return "<LEFT_BRACKET>";
+		}else if(this.getName().compareTo(")") == 0){
+			return "<RIGHT_BRACKET>";
+		}else if(this.getName().compareTo(";") == 0){
+			return "<SEMICOLON>";
+		}else if(this.getName().compareTo(".") == 0){
+			return "<END>";
+		}
 		return "<" + value + "," + type + ">";
 	}
 
@@ -126,18 +137,25 @@ public class lex {
 		String header = "<!DOCTYPE html>\n<html>\n<style>body{\nbackground-color: #050505;}\n</style>\n";
 
 		String comment = "<!--\n";
+		int count = 1;
 		for (token tkInd: tk){
-			
-			if(tkInd.getType().compareTo("NEWLINE") != 0 || tkInd.getType().compareTo("SPACE") != 0){
-				System.out.println("token is:" + tkInd.getType());
-				comment = comment + tkInd.getString();
+			if(!((tkInd.getType().compareTo("NEWLINE") == 0) || (tkInd.getType().compareTo("SPACE") == 0) || (tkInd.getType().compareTo("TAB") == 0))){
+				// System.out.println("token is:" + tkInd.getType());
+				// System.out.println("token added.");
+				comment = comment + tkInd.getString() + " ";
+				if(count % 6 == 0){
+					comment = comment + "\n";
+				}
+				count++;
 			}
 		}
-		comment = comment + "\n-->";
+		comment = comment + "\n-->\n";
 
 		String body = "<body>\n";
 		boolean onError = false;
+		
 		for (token tkInd: tk){
+			// System.out.println(tkInd.getType().compareTo("NEWLINE"));
 			if(tkInd.getType().compareTo("ERROR") == 0){
 				onError = true;
 			}else if(tkInd.getType().compareTo("NEWLINE") == 0 || tkInd.getName().compareTo(";") == 0){
@@ -145,36 +163,35 @@ public class lex {
 			}
 			body = body +getColorP(tkInd, onError) + "";
 		}
-		System.out.print(header + body + comment);
+		System.out.print(header + comment + body + "</html>");
 	}
 	private static String getColorP(token tk, boolean onError){
-		String color = "red";	
 		if(onError == true){
-			return "<font color=\"red\"><bold>" + tk.getName() +"</bold></font>";
+			return "<font color=\"red\" size = \"12\"><bold>" + tk.getName() +"</bold></font>";
 		}
 		switch(tk.getType()){
 			case "ERROR":
-				return "<font color=\"#c50000\">" + tk.getName()+"</font>";
+				return "<font color=\"#c50000\" size = \"12\">" + tk.getName()+"</font>\n";
 			case "VARIABLE":
-				return "<font color=\"#edc951\">" + tk.getName()+"</font>";	
+				return "<font color=\"#edc951\"size = \"12\">" + tk.getName()+"</font>\n";	
 			case "COMPARATOR":
-				return "<font color=\"white\">" + tk.getName()+"</font>";	
+				return "<font color=\"white\"size = \"12\">" + tk.getName()+"</font>\n";	
 			case "TERMINAL":
-				return "<font color=\"#eb6841\">" + tk.getName()+"</font>";	
+				return "<font color=\"#eb6841\"size = \"12\">" + tk.getName()+"</font>\n";	
 			case "RESERVED":
-				return "<font color=\"#087e8b\">" + tk.getName()+"</font>";	
+				return "<font color=\"#087e8b\"size = \"12\">" + tk.getName()+"</font>\n";	
 			case "END":
-				return "<font color=\"white\">" + tk.getName()+"</font></p>";	
+				return "<font color=\"white\"size = \"12\">" + tk.getName()+"</font></p>\n";	
 			case "INTEGER":
-				return "<font color=\"#00a0b0\">" + tk.getName()+"</font>";	
+				return "<font color=\"#00a0b0\"size = \"12\">" + tk.getName()+"</font>\n";	
 			case "FLOAT":
-				return "<font color=\"brown\">" + tk.getName()+"</font>";	
+				return "<font color=\"brown\"size = \"12\">" + tk.getName()+"</font>\n";	
 			case "SPACE":
-				return " ";
+				return "<font size = \"12\">&nbsp</font>";
 			case "TAB":
-				return "    ";
+				return "<font size = \"12\">&nbsp&nbsp&nbsp&nbsp</font>";
 			case "NEWLINE":
-				return "</p><p>";
+				return "</p>\n<p>\n";
 		}
 		return "";
 	}
