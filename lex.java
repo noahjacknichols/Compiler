@@ -130,10 +130,10 @@ public class lex {
 				allTokens.add(temp_tk);
 				// reached EOF
 		}
-		encodeHTML(allTokens);
+		encodeHTML(allTokens, symTable);
 	}
 
-	private static void encodeHTML(ArrayList<token> tk){
+	private static void encodeHTML(ArrayList<token> tk, symbolTable symTable){
 		String header = "<!DOCTYPE html>\n<html>\n<style>body{\nbackground-color: #050505;}\n</style>\n";
 
 		String comment = "<!--\n";
@@ -142,9 +142,13 @@ public class lex {
 			if(!((tkInd.getType().compareTo("NEWLINE") == 0) || (tkInd.getType().compareTo("SPACE") == 0) || (tkInd.getType().compareTo("TAB") == 0))){
 				// System.out.println("token is:" + tkInd.getType());
 				// System.out.println("token added.");
+				if(tkInd.getType().compareTo("VARIABLE")==0){
+					comment = comment + "<ID," +symTable.index(tkInd.getName()) + "> ";
+				}else{
 				comment = comment + tkInd.getString() + " ";
 				if(count % 6 == 0){
 					comment = comment + "\n";
+					}
 				}
 				count++;
 			}
@@ -286,8 +290,26 @@ public class lex {
 					return new token(digitBuffer, "ERROR");
 				}
 				else {
+					// System.out.println("c is:" + c);
+					if(c == 'E' || c=='e' || isLetter(c) != true){
+					digitBuffer =digitBuffer + c;
+					System.in.mark(10000);
+					c=readNextChar();
+					while(c == '-' || c=='+' || isDigit(c)){
+						digitBuffer = digitBuffer +c;
+						System.in.mark(10000);
+						c = readNextChar();
+					}
+					
+					
 					System.in.reset();
+					
 					return new token(digitBuffer, "FLOAT");
+					}else{
+						// System.out.println("wrong else");
+						System.in.reset();
+						return new token(digitBuffer, "ERROR");
+					}
 				}
 
 			}
