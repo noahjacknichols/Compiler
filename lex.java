@@ -130,8 +130,130 @@ public class lex {
 				allTokens.add(temp_tk);
 				// reached EOF
 		}
-		encodeHTML(allTokens, symTable);
+		parse(allTokens);
+		//no longer need to parse into HTML
+		// encodeHTML(allTokens, symTable);
 	}
+
+	public static Hashtable<String, List<String>> initFIRST(Hashtable<String, List<String>> first){
+		first.put("program", Arrays.asList("def", "int", "double", "fed", "if", "fi", "while", "print"));
+		first.put("fdecls", Arrays.asList("def"));
+		first.put("fdecls_r", Arrays.asList(""));
+		first.put("decl", Arrays.asList(""));
+		first.put("declr_r", Arrays.asList(""));
+		first.put("expr", Arrays.asList(""));
+		first.put("expr_r", Arrays.asList(""));
+		first.put("term", Arrays.asList(""));
+		first.put("term_r", Arrays.asList(""));
+		first.put("bexpr", Arrays.asList(""));
+		return first;
+
+	}
+	public static Hashtable<String, List<String>> initFOLLOW(Hashtable<String, List<String>> follow){
+		follow.put("program", Arrays.asList("int", "double", "if", "while", "print"));
+		return follow;
+	}
+
+	public static boolean match(ArrayList<token> allTokens, token current){
+
+		return false;
+	}
+	public static String parse(ArrayList<token> allTokens){
+		Hashtable<String, List<String>> FIRST = new Hashtable<String, List<String>>();
+		Hashtable<String, List<String>> FOLLOW = new Hashtable<String, List<String>>();
+		initFIRST(FIRST);
+		initFOLLOW(FOLLOW);
+		token first = allTokens.remove(0);
+		token follow = allTokens.remove(0);
+		if(first == null || follow == null){
+			return "error";	
+		}
+		
+
+		return "EOF";
+	}
+
+	public static boolean match(String toMatch, ArrayList<token> allTokens){
+		if(allTokens.get(0).getName().equals(toMatch)){
+			allTokens.remove(0);
+			return true;
+		}
+		return false;
+	}
+	public static boolean program(ArrayList<token> allTokens){
+		if(allTokens.get(0) != null){
+			return fdecls(allTokens) && declarations(allTokens) && statement_seq(allTokens) && match('.');
+		}else{
+			return false;
+		}
+	}
+	public static boolean fdecls(ArrayList<token> allTokens){
+		//<fdec> | <fdecls_r>
+		token nextToken = allTokens.remove(0);
+		if(nextToken.getType().equals("<fdec>")){
+			return fdec(allTokens) && match(";", allTokens);
+		}else if(nextToken.getType() == "<fdecls_r>"){
+			return fdecls_r(allTokens) && match(";", allTokens);
+		}else{
+			return true;
+		}
+
+	}
+	public static boolean fdecls_r(ArrayList<token> allTokens){
+		token nextToken = allTokens.remove(0);
+		if(nextToken.getType().equals("<fdec>")){
+			return fdecls_r(allTokens);
+		}else{ //epsilon check
+			return true;
+		}
+	}
+
+	public static boolean fdec(ArrayList<token> allTokens){
+		token nextToken = allTokens.remove(0);
+		if(nextToken.getType().equals("<def>")){
+			//now we need to match all this stuff
+			return type(allTokens) && fname(allTokens) && match("(", allTokens) && params(allTokens) && match(")", allTokens) && declarations(allTokens) && state_seq(allTokens) && match("fed", allTokens);
+		}
+		return false;
+	}
+
+	public static boolean declarations(ArrayList<token> allTokens){
+		token nextToken = allTokens.remove(0);
+		if(nextToken.getType().equals("<decl>")){
+			return decl(allTokens) && match(";", allTokens);
+		}else if(nextToken.getType().equals("<declarations>")){
+			return declarations(allTokens) && match(";", allTokens);
+			
+		}else{
+			return true;
+		}
+	}
+
+	public static boolean decl(ArrayList<token> allTokens){
+		token nextToken = allTokens.get(0);
+		if(nextToken.getType().equals("<type>")){
+			return type(allTokens);
+		}
+		return false;
+	}
+	public static boolean type(ArrayList<token> allTokens){
+		token nextToken = allTokens.remove(0);
+		if(nextToken.getName().equals("INT") || nextToken.getName().equals("DOUBLE")){
+			return true;
+		}
+		return false;
+	}
+
+	public static boolean varlist(ArrayList<token> allTokens){
+
+		return var(allTokens) && varlist_r(allTokens);
+
+	}
+	public static boolean varlist_r(ArrayList<token> allTokens){
+		boolean x = match(",", allTokens) && varlist(allTokens);
+		return true;
+	}
+
 
 	private static void encodeHTML(ArrayList<token> tk, symbolTable symTable){
 		String header = "<!DOCTYPE html>\n<html>\n<style>body{\nbackground-color: #050505;}\n</style>\n";
@@ -140,9 +262,7 @@ public class lex {
 		int count = 1;
 		for (token tkInd: tk){
 			if(!((tkInd.getType().compareTo("NEWLINE") == 0) || (tkInd.getType().compareTo("SPACE") == 0) || (tkInd.getType().compareTo("TAB") == 0))){
-				// System.out.println("token is:" + tkInd.getType());
-				// System.out.println("token added.");
-				if(tkInd.getType().compareTo("VARIABLE")==0){
+				// System.out.println("token is:" + tkInd.getType()); // System.out.println("token added."); if(tkInd.getType().compareTo("VARIABLE")==0){
 					comment = comment + "<ID," +symTable.index(tkInd.getName()) + "> ";
 				}else{
 				comment = comment + tkInd.getString() + " ";
@@ -152,12 +272,12 @@ public class lex {
 				}
 				count++;
 			}
-		}
+
 		comment = comment + "\n-->\n";
 
 		String body = "<body>\n";
 		boolean onError = false;
-		
+
 		for (token tkInd: tk){
 			// System.out.println(tkInd.getType().compareTo("NEWLINE"));
 			if(tkInd.getType().compareTo("ERROR") == 0){
@@ -177,19 +297,19 @@ public class lex {
 			case "ERROR":
 				return "<font color=\"#c50000\" size = \"12\">" + tk.getName()+"</font>\n";
 			case "VARIABLE":
-				return "<font color=\"#edc951\"size = \"12\">" + tk.getName()+"</font>\n";	
+				return "<font color=\"#edc951\"size = \"12\">" + tk.getName()+"</font>\n";
 			case "COMPARATOR":
-				return "<font color=\"white\"size = \"12\">" + tk.getName()+"</font>\n";	
+				return "<font color=\"white\"size = \"12\">" + tk.getName()+"</font>\n";
 			case "TERMINAL":
-				return "<font color=\"#eb6841\"size = \"12\">" + tk.getName()+"</font>\n";	
+				return "<font color=\"#eb6841\"size = \"12\">" + tk.getName()+"</font>\n";
 			case "RESERVED":
-				return "<font color=\"#087e8b\"size = \"12\">" + tk.getName()+"</font>\n";	
+				return "<font color=\"#087e8b\"size = \"12\">" + tk.getName()+"</font>\n";
 			case "END":
-				return "<font color=\"white\"size = \"12\">" + tk.getName()+"</font></p>\n";	
+				return "<font color=\"white\"size = \"12\">" + tk.getName()+"</font></p>\n";
 			case "INTEGER":
-				return "<font color=\"#00a0b0\"size = \"12\">" + tk.getName()+"</font>\n";	
+				return "<font color=\"#00a0b0\"size = \"12\">" + tk.getName()+"</font>\n";
 			case "FLOAT":
-				return "<font color=\"brown\"size = \"12\">" + tk.getName()+"</font>\n";	
+				return "<font color=\"brown\"size = \"12\">" + tk.getName()+"</font>\n";
 			case "SPACE":
 				return "<font size = \"12\">&nbsp</font>";
 			case "TAB":
@@ -224,7 +344,7 @@ public class lex {
 
 	private static token getNextToken(char c, symbolTable symTable) throws IOException{
 		// System.out.println("c:" +(char) c);
-		
+
 		if(WHITESPACE.contains(c)){
 			// System.in.mark(10000);
 			// System.out.println("found whitespace");
@@ -300,10 +420,10 @@ public class lex {
 						System.in.mark(10000);
 						c = readNextChar();
 					}
-					
-					
+
+
 					System.in.reset();
-					
+
 					return new token(digitBuffer, "FLOAT");
 					}else{
 						// System.out.println("wrong else");
@@ -313,7 +433,7 @@ public class lex {
 				}
 
 			}
-		
+
 		}else if(isLetter(c)){
 			// System.out.println("isLetter");
 			//get the word, compare to reserved / symbol table
@@ -352,13 +472,13 @@ public class lex {
 				// System.in.reset();
 				return new token(c, "TERMINAL");
 			}
-		} 
+		}
 		final token tok = new token(c, "NON_PARSEABLE");
 		return tok;
-		
-			
-			
+
+
+
 	}
 
 
-} 
+}
