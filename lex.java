@@ -37,6 +37,17 @@ class token {
 	public String getName() {
 		return value;
 	}
+	public String getRepresentation(){
+		if(this.type.compareTo("VARIABLE") == 0){
+			return "ID";
+		}else if(this.type.compareTo("TERMINAL") == 0 || this.type.compareTo("RESERVED") == 0){
+			return this.value;
+		}else if(this.type.compareTo("INTEGER") == 0 || this.type.compareTo("DOUBLE") == 0){
+			return this.type;
+		}else{
+			return this.value;
+		}
+	}
 }
 
 class symbol {
@@ -109,20 +120,32 @@ class symbolTable {
 	}
 }
 
-public class lex {
+
+public class Parser {
+	
+}
+
+
+
+
+class lex {
 	private static final List<String> RESERVED = Arrays.asList("if", "fi", "then", "else", "do", "od", "def", "fed",
 			"int", "double", "print", "return", "or", "and", "not", "while");
 	private static final List<Character> TERMINALS = Arrays.asList(';', ',', '(', ')', '[', ']', '+', '-', '*', '/',
 			'%', '.', '=', '>', '<');
 	private static final List<Character> WHITESPACE = Arrays.asList(' ', '\n', '\t', '\f','\r');
+	private static ArrayList<token> allTokens = new ArrayList<token>();
 
+	public static ArrayList<token> getTokens(){
+		return allTokens;
+	}
 	// read in info
-	public static void main(final String args[]) throws IOException {
+	public static void readInput() throws IOException {
 		int ch;
 		symbolTable symTable = new symbolTable();
 		symTable.init(RESERVED);
 		token temp_tk;
-		ArrayList<token> allTokens = new ArrayList<token>();
+		// ArrayList<token> allTokens = new ArrayList<token>();
 		// System.out.println("processing:");
 		while ((ch = System.in.read()) != -1) {
 				temp_tk = getNextToken((char) ch, symTable);
@@ -130,129 +153,139 @@ public class lex {
 				allTokens.add(temp_tk);
 				// reached EOF
 		}
-		parse(allTokens);
+		// parse();
 		//no longer need to parse into HTML
 		// encodeHTML(allTokens, symTable);
 	}
+	// public static boolean match(String toMatch, ArrayList<token> allTokens){
+	// 	if(allTokens.get(0).getName().equals(toMatch)){
+	// 		allTokens.remove(0);
+	// 		return true;
+	// 	}
+	// 	return false;
+	// }
+	// public static boolean program(ArrayList<token> allTokens){
+	// 	if(allTokens.get(0) != null){
+	// 		return fdecls(allTokens) && declarations(allTokens) && statement_seq(allTokens) && match('.');
+	// 	}else{
+	// 		return false;
+	// 	}
+	// }
+	// public static boolean fdecls(ArrayList<token> allTokens){
+	// 	//<fdec> | <fdecls_r>
+	// 	token nextToken = allTokens.remove(0);
+	// 	if(nextToken.getType().equals("<fdec>")){
+	// 		return fdec(allTokens) && match(";", allTokens);
+	// 	}else if(nextToken.getType() == "<fdecls_r>"){
+	// 		return fdecls_r(allTokens) && match(";", allTokens);
+	// 	}else{
+	// 		return true;
+	// 	}
 
-	public static Hashtable<String, List<String>> initFIRST(Hashtable<String, List<String>> first){
-		first.put("program", Arrays.asList("def", "int", "double", "fed", "if", "fi", "while", "print"));
-		first.put("fdecls", Arrays.asList("def"));
-		first.put("fdecls_r", Arrays.asList(""));
-		first.put("decl", Arrays.asList(""));
-		first.put("declr_r", Arrays.asList(""));
-		first.put("expr", Arrays.asList(""));
-		first.put("expr_r", Arrays.asList(""));
-		first.put("term", Arrays.asList(""));
-		first.put("term_r", Arrays.asList(""));
-		first.put("bexpr", Arrays.asList(""));
-		return first;
+	// }
+	// public static boolean fdecls_r(ArrayList<token> allTokens){
+	// 	token nextToken = allTokens.remove(0);
+	// 	if(nextToken.getType().equals("<fdec>")){
+	// 		return fdecls_r(allTokens);
+	// 	}else{ //epsilon check
+	// 		return true;
+	// 	}
+	// }
 
-	}
-	public static Hashtable<String, List<String>> initFOLLOW(Hashtable<String, List<String>> follow){
-		follow.put("program", Arrays.asList("int", "double", "if", "while", "print"));
-		return follow;
-	}
+	// public static boolean fdec(ArrayList<token> allTokens){
+	// 	token nextToken = allTokens.remove(0);
+	// 	if(nextToken.getType().equals("<def>")){
+	// 		//now we need to match all this stuff
+	// 		return type(allTokens) && fname(allTokens) && match("(", allTokens) && params(allTokens) && match(")", allTokens) && declarations(allTokens) && state_seq(allTokens) && match("fed", allTokens);
+	// 	}
+	// 	return false;
+	// }
 
-	public static boolean match(ArrayList<token> allTokens, token current){
-
-		return false;
-	}
-	public static String parse(ArrayList<token> allTokens){
-		Hashtable<String, List<String>> FIRST = new Hashtable<String, List<String>>();
-		Hashtable<String, List<String>> FOLLOW = new Hashtable<String, List<String>>();
-		initFIRST(FIRST);
-		initFOLLOW(FOLLOW);
-		token first = allTokens.remove(0);
-		token follow = allTokens.remove(0);
-		if(first == null || follow == null){
-			return "error";	
-		}
-		
-
-		return "EOF";
-	}
-
-	public static boolean match(String toMatch, ArrayList<token> allTokens){
-		if(allTokens.get(0).getName().equals(toMatch)){
-			allTokens.remove(0);
-			return true;
-		}
-		return false;
-	}
-	public static boolean program(ArrayList<token> allTokens){
-		if(allTokens.get(0) != null){
-			return fdecls(allTokens) && declarations(allTokens) && statement_seq(allTokens) && match('.');
-		}else{
-			return false;
-		}
-	}
-	public static boolean fdecls(ArrayList<token> allTokens){
-		//<fdec> | <fdecls_r>
-		token nextToken = allTokens.remove(0);
-		if(nextToken.getType().equals("<fdec>")){
-			return fdec(allTokens) && match(";", allTokens);
-		}else if(nextToken.getType() == "<fdecls_r>"){
-			return fdecls_r(allTokens) && match(";", allTokens);
-		}else{
-			return true;
-		}
-
-	}
-	public static boolean fdecls_r(ArrayList<token> allTokens){
-		token nextToken = allTokens.remove(0);
-		if(nextToken.getType().equals("<fdec>")){
-			return fdecls_r(allTokens);
-		}else{ //epsilon check
-			return true;
-		}
-	}
-
-	public static boolean fdec(ArrayList<token> allTokens){
-		token nextToken = allTokens.remove(0);
-		if(nextToken.getType().equals("<def>")){
-			//now we need to match all this stuff
-			return type(allTokens) && fname(allTokens) && match("(", allTokens) && params(allTokens) && match(")", allTokens) && declarations(allTokens) && state_seq(allTokens) && match("fed", allTokens);
-		}
-		return false;
-	}
-
-	public static boolean declarations(ArrayList<token> allTokens){
-		token nextToken = allTokens.remove(0);
-		if(nextToken.getType().equals("<decl>")){
-			return decl(allTokens) && match(";", allTokens);
-		}else if(nextToken.getType().equals("<declarations>")){
-			return declarations(allTokens) && match(";", allTokens);
+	// public static boolean declarations(ArrayList<token> allTokens){
+	// 	token nextToken = allTokens.remove(0);
+	// 	if(nextToken.getType().equals("<decl>")){
+	// 		return decl(allTokens) && match(";", allTokens);
+	// 	}else if(nextToken.getType().equals("<declarations>")){
+	// 		return declarations(allTokens) && match(";", allTokens);
 			
-		}else{
-			return true;
-		}
-	}
+	// 	}else{
+	// 		return true;
+	// 	}
+	// }
 
-	public static boolean decl(ArrayList<token> allTokens){
-		token nextToken = allTokens.get(0);
-		if(nextToken.getType().equals("<type>")){
-			return type(allTokens);
-		}
-		return false;
-	}
-	public static boolean type(ArrayList<token> allTokens){
-		token nextToken = allTokens.remove(0);
-		if(nextToken.getName().equals("INT") || nextToken.getName().equals("DOUBLE")){
-			return true;
-		}
-		return false;
-	}
+	// public static boolean decl(ArrayList<token> allTokens){
+	// 	token nextToken = allTokens.get(0);
+	// 	if(nextToken.getType().equals("<type>")){
+	// 		return type(allTokens);
+	// 	}
+	// 	return false;
+	// }
+	// public static boolean type(ArrayList<token> allTokens){
+	// 	token nextToken = allTokens.remove(0);
+	// 	if(nextToken.getName().equals("INT") || nextToken.getName().equals("DOUBLE")){
+	// 		return true;
+	// 	}
+	// 	return false;
+	// }
 
-	public static boolean varlist(ArrayList<token> allTokens){
+	// public static boolean varlist(ArrayList<token> allTokens){
 
-		return var(allTokens) && varlist_r(allTokens);
+	// 	return var(allTokens) && varlist_r(allTokens);
 
-	}
-	public static boolean varlist_r(ArrayList<token> allTokens){
-		boolean x = match(",", allTokens) && varlist(allTokens);
-		return true;
-	}
+	// }
+	// public static boolean varlist_r(ArrayList<token> allTokens){
+	// 	if(allTokens.get(0).getClass().equals("<variable>")){
+	// 		return match(",", allTokens) && varlist(allTokens);
+	// 	}
+	// 	return true;
+	// }
+	// public static boolean statement_seq(ArrayList<token> allTokens){
+	// 	return statement(allToknes) && statement_seq_r(allTokens);
+	// }
+
+	// public static boolean statement(ArrayList<token> allTokens){
+	// 	token nextToken = allTokens.get(0);
+	// 	if(nextToken.getRep().equals("<id>")){
+	// 		return var(allTokens) && match("=", allTokens) && expr(); 
+	// 	}else if(nextToken.getRep().equals("<if>")){
+	// 		return match("if", allTokens) && bexpr(allToknes) && match("then",allTokens) && statement_seq(allTokens), && opt_else(allTokens) && match("fi", allTokens);
+	// 	}else if(nextToken.getRep().equals("<while>")){
+	// 		return match("while", allTokens) && bexpr(allTokens) && match("do", allTokens) && statement_seq(allTokens) && match("od", allTokens);
+	// 	}else if(nextToken.getRep().equals("<print>")){
+	// 		return match("print", allTokens) && expr(allTokens);
+	// 	}else if(nextToken.getRep().equals("<return>")){
+	// 		return match("return") && expr(allTokens);
+	// 	}else{
+	// 		return true;
+	// 	}
+	// }
+
+	// public static boolean statement_seq_r() {
+	// 	if(match(";", allTokens) && statement_seq(allTokens) == false){
+	// 		return true;
+	// 	}
+	// 	return true;
+	// }
+
+	// public static boolean opt_else(){
+	// 	if(match("else", allTokens) && statement_seq(allTokens) == false){
+	// 		return true
+	// 	}
+	// 	return true;
+	// }
+	// public static boolean expr(){
+	// 	if(term() && term_r() == false){
+	// 		return true;
+	// 	}
+	// 	return true;
+	// }
+	// public static boolean term_r(){
+	// 	if(match("+", allTokens) && term() && term_r() == true){
+	// 		return true;
+	// 	}else if(match("-"))
+	// }
+
+
 
 
 	private static void encodeHTML(ArrayList<token> tk, symbolTable symTable){
