@@ -162,7 +162,7 @@ public class Parser {
 	private void initializeFIRST() {
         FIRST.put("program", Arrays.asList("def", "int", "double", "if", "while", "print", "return", "ID"));
         FIRST.put("fdecls", Arrays.asList("def", "EPSILON"));
-        FIRST.put("fdec", Arrays.asList("def"));
+        FIRST.put("fdec", Arrays.asList("def", "EPSILON"));
         FIRST.put("fdec_r", Arrays.asList("def", "EPSILON"));
         FIRST.put("params", Arrays.asList("int", "double", "EPSILON"));
 		FIRST.put("params_r", Arrays.asList(",", "EPSILON"));
@@ -245,9 +245,9 @@ public class Parser {
         // System.out.println("initialized FIRST");
         boolean validParse = false;
         consumeToken();
-        if(token.getName().equals("def") == false){
-            System.out.print("error");
-        }
+        // if(token.getName().equals("def") == false){
+        //     System.out.println("error");
+        // }
         consumeToken(); // Twice to initialize token & lookahead
         // System.out.println("consumed two tokens");
 		
@@ -330,36 +330,37 @@ public class Parser {
 	}
 	
 	public boolean fdecls() {
-        // System.out.println("fdecls");
+        System.out.println("fdecls");
 		String first = checkFIRST("fdecls");
 		if(first != null)
-			return fdec() && match(';') && fdec_r();
+			return fdec() && fdec_r();
 		else //Epsilon
-			return true;
-	}
-	
-	public boolean fdec() {
-        // System.out.println("fdec");
-		String first = checkFIRST("fdec");
-		if(first != null)
-		{
-			return match("def") && type() && fname() && match("(") && params() && match(")") && declarations() && statement_seq() && match("fed");
-		}
-		else
 			return false;
 	}
 	
+	public boolean fdec() {
+        System.out.println("fdec");
+		String first = checkFIRST("fdec");
+		System.out.println("token is:"+ token.getRepresentation().equals("def"));
+		if(first != null && lookahead.getRepresentation().equals("def"))
+		{
+			return match("def") && type() && fname() && match("(") && params() && match(")") && declarations() && statement_seq() && match("fed") && match(';');
+		}
+		else
+			return true;
+	}
+	
 	public boolean fdec_r() {
-        // System.out.println("fdec_r");
+        System.out.println("fdec_r");
 		String first = checkFIRST("fdec_r");
-		if(first != null)
-			return fdec() && match(";") && fdec_r();
+		if(first != null && lookahead.getRepresentation().equals("def"))
+			return fdec() && fdec_r();
 		else //Epsilon
 			return true;
 	}
 
 	public boolean params() {
-        // System.out.println("params");
+        System.out.println("params");
 		String first = checkFIRST("params");
 		if (first != null)
 			return type() && var() && params_r();
@@ -368,7 +369,7 @@ public class Parser {
 	}
 	
 	public boolean params_r() {
-        // System.out.println("params_r");
+        System.out.println("params_r");
 		String first = checkFIRST("params_r");
 		if (first != null)
 			return match(",") && params();
@@ -377,7 +378,7 @@ public class Parser {
 	}
 	
 	public boolean fname() {
-        // System.out.println("fname");
+        System.out.println("fname");
 		String first = checkFIRST("fname");
 		if (first != null)
 		{
@@ -415,7 +416,7 @@ public class Parser {
 	}
 	
 	public boolean type() {
-        // System.out.println("type");
+        System.out.println("type");
         String first = checkFIRST("type");
         
         if(lookahead.getRepresentation().equals("int")){
@@ -450,7 +451,7 @@ public class Parser {
 	}
 	
 	public boolean statement() {
-        // System.out.println("statement");
+        System.out.println("statement");
 		String first = checkFIRST("statement");
 		switch(first) {
 			case "ID":
@@ -469,7 +470,7 @@ public class Parser {
 	}
 	
 	public boolean statement_seq_r() {
-        // System.out.println("Statement_seq_r");
+        System.out.println("Statement_seq_r");
 		String first = checkFIRST("statement_seq_r");
 		if(first != null)
 			return match(";") && statement_seq();
@@ -478,7 +479,7 @@ public class Parser {
 	}
 
 	public boolean opt_else() {
-        // System.out.println("opt_else");
+        System.out.println("opt_else");
 		String first = checkFIRST("opt_else");
 		if (first != null)
 			return match("else") && statement_seq();
@@ -487,7 +488,7 @@ public class Parser {
 	}
 	
 	public boolean expr(){
-        // System.out.println("expr");
+        System.out.println("expr");
 		String first = checkFIRST("expr");
 		if (first != null)
 			return term() && term_r();
@@ -496,7 +497,7 @@ public class Parser {
 	}
 	
 	public boolean term_r() {
-        // System.out.println("term_r");
+        System.out.println("term_r");
 		String first = checkFIRST("term_r");
 		
 		if (first != null) {
@@ -512,7 +513,7 @@ public class Parser {
 	}
 	
 	public boolean term() {
-        // System.out.println("term");
+        System.out.println("term");
 		String first = checkFIRST("term");
 		
 		if (first != null)
@@ -522,7 +523,7 @@ public class Parser {
 	}
 	
 	public boolean factor_r() {
-        // System.out.println("factor_r");
+        System.out.println("factor_r");
 		String first = checkFIRST("factor_r");
 		if (first != null) {
 			switch(first) {
@@ -541,7 +542,7 @@ public class Parser {
 	}
 
 	 public boolean factor() {
-        // System.out.println("factor");
+        System.out.println("factor");
 		String first = checkFIRST("factor");
 		if (first != null) {
 			if (first.equals("ID"))
@@ -560,7 +561,7 @@ public class Parser {
 	}
  
 	public boolean factor_r_p() {
-        // System.out.println("factor_r_p");
+        System.out.println("factor_r_p");
 		String first = checkFIRST("factor_r_p");
 		if (first != null) {
 			if (first.equals("("))
@@ -573,7 +574,7 @@ public class Parser {
 	}
 	
 	public boolean exprseq() {
-        // System.out.println("exprseq");
+        System.out.println("exprseq");
 		String first = checkFIRST("exprseq");
 		if (first != null)
 			return expr() && exprseq_r();
@@ -582,7 +583,7 @@ public class Parser {
 	}
 	
 	public boolean exprseq_r() {
-        // System.out.println("exprseq_r");
+        System.out.println("exprseq_r");
 		String first = checkFIRST("exprseq_r");
 		if (first != null)
 			return match(",") && exprseq();
@@ -591,7 +592,7 @@ public class Parser {
 	}
 	
 	public boolean bexpr() {
-        // System.out.println("bexpr");
+        System.out.println("bexpr");
         String first = checkFIRST("bexpr");
         // System.out.print(first);
 		if (first != null)
@@ -601,7 +602,7 @@ public class Parser {
 	}
 	
 	public boolean bterm_r() {
-        // System.out.println("bterm_r");
+        System.out.println("bterm_r");
 		String first = checkFIRST("bterm_r");
 		if (first != null)
 			return match("or") && bterm() && bterm_r();
@@ -610,7 +611,7 @@ public class Parser {
 	}
 	
 	public boolean bterm() {
-        // System.out.println("bterm");
+        System.out.println("bterm");
 		String first = checkFIRST("bterm");
 		if (first != null)
 			return bfactor() && bfactor_r();
@@ -619,7 +620,7 @@ public class Parser {
 	}
 	
 	public boolean bfactor_r() {
-        // System.out.println("bfactor_r");
+        System.out.println("bfactor_r");
 		String first = checkFIRST("bfactor_r");
 		if (first != null)
 			return match("and") && bfactor() && bfactor_r();
@@ -628,7 +629,7 @@ public class Parser {
 	}
 	
 	public boolean bfactor() {
-        // System.out.println("bfactor");
+        System.out.println("bfactor");
 		String first = checkFIRST("bfactor");
 		switch (first) {
 			case "(":
@@ -642,7 +643,7 @@ public class Parser {
 	
 	// Careful
 	public boolean bfactor_r_p() {
-        // System.out.println("bfactor_r_p");
+        System.out.println("bfactor_r_p");
 		String first = checkFIRST("bfactor_r_p");
 		if (FIRST.get("bfactor_r_p").contains(first) && token.getRepresentation().equals("COMPARATOR")){
 			return expr() && comp() && expr();
@@ -653,7 +654,7 @@ public class Parser {
 	}
 	
 	public boolean comp() {
-        // System.out.println("comp");
+        System.out.println("comp");
         String first = checkFIRST("comp");
         // System.out.println(first);
         if (first != null){
@@ -665,7 +666,7 @@ public class Parser {
 	}
 	
 	public boolean var() {
-        // System.out.println("var");
+        System.out.println("var");
 		String first = checkFIRST("var");
 		if (first != null)
 		{
@@ -686,7 +687,7 @@ public class Parser {
 	}
 	
 	public boolean var_r() {
-        // System.out.println("var_r");
+        System.out.println("var_r");
 		String first = checkFIRST("var_r");
 		if (first != null)
 			return match("[") && expr() && match("]");
@@ -736,6 +737,8 @@ public class Parser {
 	}
 	
 	public boolean match(char c) {
+		System.out.println("character tomatch:" + c);
+		System.out.println("character we are matching to:" + lookahead.getRepresentation());
 		boolean isMatch = lookahead.getRepresentation().equals(String.valueOf(c));
         if (isMatch){ 
             prettyPrint(String.valueOf(c));
@@ -743,8 +746,21 @@ public class Parser {
         }
 		return isMatch;
 	}
+
+	public String fixComparator(String s){
+		String[] comps = {"=","<",">", "<>", "<=", ">=", "=="};
+		if(Arrays.asList(comps).contains(s)){
+			return "COMPARATOR";
+		}else{
+			return s;
+		}
+		
+	}
 	
 	public boolean match(String s) {
+		s = fixComparator(s);
+		System.out.println("string tomatch:" + s);
+		System.out.println("string we are matching to:" + lookahead.getRepresentation());
         boolean isMatch = lookahead.getRepresentation().equals(s);
         // System.out.println(token.getString());
         // System.out.println("MATCHING: " + s + " lookahead:"+lookahead.getRepresentation());
