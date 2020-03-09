@@ -63,6 +63,8 @@ class token {
 class symbol {
 	public token symbolToken;
 	public int id;
+	public String value = "";
+	public String type = "";
 
 	public symbol(final token tok, final int ID) {
 		symbolToken = tok;
@@ -91,7 +93,13 @@ class symbol {
     public String printSymbol(){
         // return "hello";
         return this.symbolToken.getName() + ", " + this.id;
-    }
+	}
+	public void setValue(String s){
+		this.value = s;
+	}
+	public void setType(String s){
+		this.type = s;
+	}
 }
 
 class symbolTable {
@@ -127,6 +135,7 @@ class symbolTable {
 		return false;
 	}
 
+
 	public int index(String name) {
 		int count = 0;
 		for (final symbol tableInd : symbols) {
@@ -136,12 +145,38 @@ class symbolTable {
 			count++;
 		}
 		return -1;
-    }
+	}
+	public symbolTable dupe(){
+		symbolTable duplicate = new symbolTable(this.name + "_rec");
+		for(int i = 0; i < this.counter; i++){
+			duplicate.addSymbol(this.symbols.get(i).getSymbolToken());
+		}
+		return duplicate;
+	}
     public void printSymbolTable(){
         for(int i = 0; i < symbols.size(); i++){
             System.out.println(symbols.get(i).printSymbol());
         }
-    }
+	}
+	public symbol getSymbol(String name){
+		return this.symbols.get(this.index(name));
+	}
+
+}
+
+class node{
+	node parent = null;
+	String type = "";
+	node right = null;
+	ArrayList<token> conditional = new ArrayList<token>(); // x <> y 
+	public node(node Parent, String Type){
+		this.parent = Parent;
+		this.type = Type;
+		
+	}
+	public void setRight(node right){
+		this.right = right;
+	}
 
 }
 
@@ -673,13 +708,17 @@ public class Parser {
 			currentName = lookahead.getName();
 			
 			if (currentFuncName != null){
-                // System.out.println("HERE\n");
+                System.out.println("HERE\n");
                 // printSymbolTables();
                 // System.out.println("token is:"+  lookahead.getName());
                 if(checkTableName(lookahead.getName()) == false){
-                    getSymbolTable(currentFuncName).addSymbol(lookahead);
+					if(getSymbolTable(currentFuncName).contains(currentName) == false){
+						getSymbolTable(currentFuncName).addSymbol(lookahead);
+						System.out.println("token type:" + token.value);
+						getSymbolTable(currentFuncName).getSymbol(lookahead.getName()).setType(token.value);
+					}
                 }
-            }
+            } // ELSE add to global table
 			return match() && var_r();
 		}
 		else
