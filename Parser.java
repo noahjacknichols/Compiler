@@ -340,7 +340,15 @@ public class Parser {
             }
         }
         return null;
-    }
+	}
+	public boolean hasSymbolTable(String s){
+		for(int i = 0; i < symboltables.size(); i++){
+			if(symboltables.get(i).getName().equals(s)){
+				return true;
+			}
+		}
+		return false;
+	}
 
     public void addSymbol(token tok){
         symbolTable sym = getSymbolTable(currentFuncName);
@@ -400,7 +408,14 @@ public class Parser {
 		System.out.println("token is:"+ lookahead.getRepresentation().equals("def"));
 		if(first != null && lookahead.getRepresentation().equals("def")){
 			System.out.println("lookahead is def");
-			match("def"); type(); fname(); match("("); params(); match(")"); declarations(); statement_seq(); 
+			node oldCurrent = currentNode;
+			node temp = new node("function");
+
+			match("def"); type(); temp = fname(); 
+			currentNode = temp; 
+			match("("); params(); match(")"); declarations(); statement_seq();
+			functionNodes.add(temp);
+			currentNode = oldCurrent; 
 			System.out.println("MATCH FED PHASE"); match("fed"); match(';');
 		}
 	}
@@ -434,41 +449,47 @@ public class Parser {
 		}
 	}
 	
-	public boolean fname() {
+	public node fname() {
         System.out.println("fname");
 		String first = checkFIRST("fname");
-		if (first != null)
-		{
+		if (first != null){
+			System.out.println("FNAME");
 			currentName = lookahead.getName();
             currentFuncName = currentName;
 			createSymbolTable(currentFuncName);
 			functionNodes.add(new node(currentFuncName));
-			
-			return match("ID");
+			node temp = new node(currentFuncName);
+				
+			match("ID");
+			return temp;
 		}
 		else
-			return false;
+			return null;
 	}
 	
 	public void declarations() {
 		System.out.println("declarations");
 		String first = checkFIRST("declarations");
-		if(first != null)
-			decl(); match(";"); decl_r();
+		if(first != null){
+			decl(); match(";"); declarations();
+		}
 	}
 	
 	public void decl() {
 		System.out.println("decl");
 		String first = checkFIRST("decl");
-		if(first != null)
-			type();varlist();
+		if(first != null){
+			type(); varlist();
+		}
 	}
 	
 	public void decl_r() {
+		System.out.println("lookahead:" + lookahead.getName());
 		String first = checkFIRST("decl_r");
 		if(first != null){
-			decl(); match(";"); decl_r();
+			match(";"); declarations();
 		}
+		System.out.println("end of decl_r");
 	}
 	
 	public void type() {
@@ -510,6 +531,7 @@ public class Parser {
 		if (first != null){
 			match(","); varlist();
 		}
+		System.out.println("varlist_r first empty");
 	}
 	
 	public node statement() {
@@ -662,9 +684,18 @@ public class Parser {
 		node temp = new node("factor");
 		if (first != null) {
 			if (first.equals("ID")){
+				System.out.println("factor ID " + lookahead.getName());
 				temp.value = lookahead.value;
 				
+				if(hasSymbolTable(lookahead.getName())){
+					match("ID"); 
+					System.out.println("ID HAS SYMTABLE");
+					temp = factor_r_p();
+					return temp;
+				}
 				match("ID"); 
+				
+
 				return temp; //if is function call this factor_r_p();
 			}else if (first.equals("NUMBER")){
 				temp.value = lookahead.value;
@@ -685,15 +716,18 @@ public class Parser {
 		
 	}
  
-	public void factor_r_p() {
+	public node factor_r_p() {
         System.out.println("factor_r_p");
 		String first = checkFIRST("factor_r_p");
 		node temp = new node("factor_r_p");
 		if (first != null) {
 			if (first.equals("(")){
 				match("("); temp = exprseq(); match(")");
+				return temp;
 			}
 		}
+		System.out.println("factor_r_p first null");
+		return null;
 	}
 	
 	public node exprseq() {
