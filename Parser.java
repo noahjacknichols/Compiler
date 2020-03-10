@@ -92,7 +92,7 @@ class symbol {
     }
     public String printSymbol(){
         // return "hello";
-        return this.symbolToken.getName() + ", " + this.id;
+        return this.symbolToken.getName() + ", " + this.id + ", " + this.type + ", " + this.value;
 	}
 	public void setValue(String s){
 		this.value = s;
@@ -168,14 +168,29 @@ class node{
 	node parent = null;
 	String type = "";
 	node right = null;
+	node left = null;
+	String value = "";
+	public ArrayList<node> nodes = new ArrayList<node>();
 	ArrayList<token> conditional = new ArrayList<token>(); // x <> y 
-	public node(node Parent, String Type){
-		this.parent = Parent;
+	public node(String Type){
 		this.type = Type;
 		
 	}
+	public void setValue(String value){
+		this.value = value;
+	}
+	public void setLeft(node left){
+		this.left = left;
+	}
+
 	public void setRight(node right){
 		this.right = right;
+	}
+	public void addNode(node n){
+		nodes.add(n);
+	}
+	public node getNode(int index){
+		return nodes.get(index);
 	}
 
 }
@@ -192,7 +207,12 @@ public class Parser {
     private String currentName, currentFuncName, currentType, currentValue;
     private int tabCount = 0;
     private String addSpace = " ";
-    public static ArrayList<symbolTable> symboltables = new ArrayList<symbolTable>();
+	public static ArrayList<symbolTable> symboltables = new ArrayList<symbolTable>();
+	String getLastType = "";
+	node currentNode = null;
+	// createSymbolTable("global");
+	
+	public static ArrayList<node> functionNodes = new ArrayList<node>();
 
 	private void initializeFIRST() {
         FIRST.put("program", Arrays.asList("def", "int", "double", "if", "while", "print", "return", "ID"));
@@ -278,15 +298,16 @@ public class Parser {
         // lexer.readInput();
         // lexer.printTokens();
         // System.out.println("initialized FIRST");
-        boolean validParse = false;
+        boolean validParse = true;
         consumeToken();
         // if(token.getName().equals("def") == false){
         //     System.out.println("error");
         // }
         consumeToken(); // Twice to initialize token & lookahead
-        // System.out.println("consumed two tokens");
+		// System.out.println("consumed two tokens");
 		
-		validParse = program();
+		
+		program();
 		
 		// System.out.println("\nValid Parse: " + validParse);
 		
@@ -356,60 +377,61 @@ public class Parser {
     // }
 
 
-    public boolean program() {
+    public void program() {
+		createSymbolTable("global");
+		node global = new node("global");
+		currentNode = global;
 		String first = checkFIRST("program");
-		if(first != null)
-			return fdecls() && declarations() && statement_seq() && match('.');
-		else
-			return false;
+		if(first != null){
+			fdecls(); declarations(); statement_seq(); match('.');
+		}
 	}
 	
-	public boolean fdecls() {
+	public void fdecls() {
         System.out.println("fdecls");
 		String first = checkFIRST("fdecls");
 		if(first != null)
-			return fdec() && fdec_r();
-		else //Epsilon
-			return false;
+			fdec();fdec_r();
 	}
 	
-	public boolean fdec() {
+	public void fdec() {
         System.out.println("fdec");
 		String first = checkFIRST("fdec");
-		System.out.println("token is:"+ token.getRepresentation().equals("def"));
-		if(first != null && lookahead.getRepresentation().equals("def"))
-		{
-			return match("def") && type() && fname() && match("(") && params() && match(")") && declarations() && statement_seq() && match("fed") && match(';');
+		System.out.println("token is:"+ lookahead.getRepresentation().equals("def"));
+		if(first != null && lookahead.getRepresentation().equals("def")){
+			System.out.println("lookahead is def");
+			match("def"); type(); fname(); match("("); params(); match(")"); declarations(); statement_seq(); 
+			System.out.println("MATCH FED PHASE"); match("fed"); match(';');
 		}
-		else
-			return true;
 	}
 	
-	public boolean fdec_r() {
+	public void fdec_r() {
         System.out.println("fdec_r");
 		String first = checkFIRST("fdec_r");
-		if(first != null && lookahead.getRepresentation().equals("def"))
-			return fdec() && fdec_r();
-		else //Epsilon
-			return true;
+		if(first != null && lookahead.getRepresentation().equals("def")){
+			fdec(); fdec_r();
+		}
 	}
 
-	public boolean params() {
+	public void params() {
         System.out.println("params");
 		String first = checkFIRST("params");
-		if (first != null)
-			return type() && var() && params_r();
-		else
-			return true;
+		if (first != null){
+			type();
+			var();
+			params_r();
+		}
+
 	}
 	
-	public boolean params_r() {
+	
+	public void params_r() {
         System.out.println("params_r");
 		String first = checkFIRST("params_r");
-		if (first != null)
-			return match(",") && params();
-		else //Epsilon
-			return true;
+		if (first != null){
+			match(",");
+			params();
+		}
 	}
 	
 	public boolean fname() {
@@ -419,288 +441,366 @@ public class Parser {
 		{
 			currentName = lookahead.getName();
             currentFuncName = currentName;
-            createSymbolTable(currentFuncName);
+			createSymbolTable(currentFuncName);
+			functionNodes.add(new node(currentFuncName));
+			
 			return match("ID");
 		}
 		else
 			return false;
 	}
 	
-	public boolean declarations() {
+	public void declarations() {
+		System.out.println("declarations");
 		String first = checkFIRST("declarations");
 		if(first != null)
-			return decl() && match(';') && decl_r();
-		else //Epsilon
-			return true;
+			decl(); match(";"); decl_r();
 	}
 	
-	public boolean decl() {
+	public void decl() {
+		System.out.println("decl");
 		String first = checkFIRST("decl");
 		if(first != null)
-			return type() && varlist();
-		else
-			return false;
+			type();varlist();
 	}
 	
-	public boolean decl_r() {
+	public void decl_r() {
 		String first = checkFIRST("decl_r");
-		if(first != null)
-			return decl() && match(";") && decl_r();
-		else //Epsilon
-			return true;
+		if(first != null){
+			decl(); match(";"); decl_r();
+		}
 	}
 	
-	public boolean type() {
+	public void type() {
         System.out.println("type");
         String first = checkFIRST("type");
         
         if(lookahead.getRepresentation().equals("int")){
-            return match("int");
+			getLastType = "int";
+			match("int");
+			return;
         }else if(lookahead.getRepresentation().equals("double")){
-            return match("double");
-        }else return false;
+			getLastType = "double";
+			match("double");
+			return;
+        }
 	}
 	
-	public boolean statement_seq() {
+	public void statement_seq() {
 		String first = checkFIRST("statement_seq");
-		if(first != null)
-			return statement() && statement_seq_r();
-		else //Epsilon
-			return true;
-	}
-	
-	public boolean varlist() {
-		String first = checkFIRST("varlist");
-		if (first != null)
-			return var() && varlist_r();
-		else
-			return false;
-	}
-	
-	public boolean varlist_r() {
-		String first = checkFIRST("varlist_r");
-		if (first != null)
-			return match(",") && varlist();
-		else //Epsilon
-			return true;
-	}
-	
-	public boolean statement() {
-        System.out.println("statement");
-		String first = checkFIRST("statement");
-		switch(first) {
-			case "ID":
-				return var() && match("=") && expr();
-			case "if":
-				return match("if") && bexpr() && match("then") && statement_seq() && opt_else() && match("fi"); 
-			case "while":
-				return match("while") && bexpr() && match("do") && statement_seq() && match("od");
-			case "print":
-				return match("print") && expr();
-			case "return":
-				return match("return") && expr();
-			default: //Epsilon
-				return true;
+		
+		if(first != null){
+			statement(); statement_seq_r();
 		}
 	}
 	
-	public boolean statement_seq_r() {
-        System.out.println("Statement_seq_r");
-		String first = checkFIRST("statement_seq_r");
-		if(first != null)
-			return match(";") && statement_seq();
-		else //Epsilon
-			return true;
+	public void varlist() {
+		System.out.println("varlist");
+		String first = checkFIRST("varlist");
+		if (first != null){
+			var(); varlist_r();
+		}
+
 	}
 
-	public boolean opt_else() {
-        System.out.println("opt_else");
-		String first = checkFIRST("opt_else");
-		if (first != null)
-			return match("else") && statement_seq();
-		else //Epsilon
-			return true;
-	}
 	
-	public boolean expr(){
-        System.out.println("expr");
-		String first = checkFIRST("expr");
-		if (first != null)
-			return term() && term_r();
-		else
-			return false;
-	}
-	
-	public boolean term_r() {
-        System.out.println("term_r");
-		String first = checkFIRST("term_r");
-		
-		if (first != null) {
-			if (first.equals("+"))
-				return match("+") && term() && term_r();
-			else if (first.equals("-"))
-				return match("-") && term() && term_r();
-			else
-				return false;
-		} else { //Epsilon
-			return true;
+	public void varlist_r() {
+		System.out.println("varlist_r");
+		String first = checkFIRST("varlist_r");
+		if (first != null){
+			match(","); varlist();
 		}
 	}
 	
-	public boolean term() {
-        System.out.println("term");
-		String first = checkFIRST("term");
-		
-		if (first != null)
-			return factor() && factor_r();
-		else
-			return false;
+	public node statement() {
+        System.out.println("statement");
+		String first = checkFIRST("statement");
+		node temp = new node("statement");
+		if(first != null){
+			switch(first) {
+				case "ID":
+					System.out.println("ID");
+					temp.setLeft(var());
+					match("=");
+					temp.setValue("=");
+					temp.setRight(expr());
+					// match();
+					currentNode.nodes.add(temp);
+					return temp;
+				case "if":
+					match("if"); 
+					//set current global to temp;
+					temp.setValue("IF");
+					node lastCurrent = currentNode;
+					currentNode = temp;
+					temp.setLeft(bexpr()); match("then"); statement_seq(); opt_else(); match("fi"); 
+					currentNode = lastCurrent;
+					return temp;
+				case "while":
+					temp.setValue("WHILE");
+					node lastCurrent2 = currentNode;
+					currentNode = temp;
+					
+					match("while"); temp.setLeft(bexpr()); match("do"); statement_seq(); match("od");
+					currentNode = lastCurrent2;
+					return temp;
+				case "print":
+					temp.setValue("PRINT");
+					match("print"); temp.setLeft(expr());
+					return temp;
+				case "return":
+					temp.setValue("RETURN");
+					match("return"); temp.setLeft(expr());
+			}
+		}
+		return null;
 	}
 	
-	public boolean factor_r() {
+	public void statement_seq_r() {
+        System.out.println("Statement_seq_r");
+		String first = checkFIRST("statement_seq_r");
+
+		if(first != null){
+			match(";"); statement(); statement_seq_r();
+		}
+	}
+
+	public void opt_else() {
+        System.out.println("opt_else");
+		String first = checkFIRST("opt_else");
+		if (first != null){
+			match("else"); statement_seq();
+		}
+	}
+	
+	public node expr(){
+        System.out.println("expr");
+		String first = checkFIRST("expr");
+		node temp = new node("expr");
+		if (first != null){
+
+			temp.setLeft(term());
+			temp.setRight(term_r());
+			return temp;
+		}else{
+			return temp;
+		}
+	}
+	
+	public node term_r() {
+		System.out.println("term_r");
+		
+		String first = checkFIRST("term_r");
+		node temp = new node("term_r");
+		if (first != null) {
+			System.out.println("first not null");
+			if (first.equals("+")){
+				System.out.println("+");
+				temp.setValue("+");
+				match("+");
+				temp.setLeft(term()); 
+				temp.setRight(term_r());
+
+				return temp;
+			}else if (first.equals("-")){
+				System.out.println("-");
+				temp.setValue("-");
+				match("-") ;
+				temp.setLeft(term());
+				temp.setRight(term_r());
+				return temp;
+			}else{
+				System.out.println("NOT RECURSIVE CALL");
+				temp.setValue(lookahead.getName());
+				match();
+				return temp; // need to fail here
+			}
+		} else { //Epsilon
+			return temp;
+		}
+	}
+	
+	public node term() {
+        System.out.println("term");
+		String first = checkFIRST("term");
+		node temp = new node("term");
+		if (first != null){
+			temp.setLeft(factor());
+			temp.setRight(factor_r());
+			return temp;
+		}else{
+			return null;
+		}
+	}
+	
+	public node factor_r() {
         System.out.println("factor_r");
 		String first = checkFIRST("factor_r");
+		node temp = new node("factor_r");
 		if (first != null) {
 			switch(first) {
 				case "*":
-					return match("*") && factor() && factor_r();
+
+					match("*"); temp.setLeft(factor()); temp.setRight(factor_r());
+					return temp;
 				case "/":
-					return match("/") && factor() && factor_r();
+					match("/"); temp.setLeft(factor()); temp.setRight(factor_r());
+					return temp;
 				case "%":
-					return match("%") && factor() && factor_r();
+					match("%"); temp.setLeft(factor()); temp.setRight(factor_r());
+					return temp;
 				default:
-					return false;
+					return null;
 			}
-		} else { //Epsilon
-			return true;
 		}
+		return null;
 	}
 
-	 public boolean factor() {
+	 public node factor() {
         System.out.println("factor");
 		String first = checkFIRST("factor");
+		node temp = new node("factor");
 		if (first != null) {
-			if (first.equals("ID"))
-				return match("ID") && factor_r_p();
-			else if (first.equals("NUMBER"))
-				return match("NUMBER") || match("NUMBER");
-			else if (first.equals("("))
-				return match("(") && expr() && match(")");
-			else if (first.equals("ID"))
+			if (first.equals("ID")){
+				temp.value = lookahead.value;
+				
+				match("ID"); 
+				return temp; //if is function call this factor_r_p();
+			}else if (first.equals("NUMBER")){
+				temp.value = lookahead.value;
+				match("NUMBER");
+				return temp;
+			}else if (first.equals("(")){
+				
+				match("("); temp = expr(); match(")");
+				return temp;
+			}else if (first.equals("ID")){
 				return var();
-			else
-				return false;
+			}else{
+				return temp;
+			}
 		} else {
-			return false;
+			return null;
 		}
+		
 	}
  
-	public boolean factor_r_p() {
+	public void factor_r_p() {
         System.out.println("factor_r_p");
 		String first = checkFIRST("factor_r_p");
+		node temp = new node("factor_r_p");
 		if (first != null) {
-			if (first.equals("("))
-				return match("(") && exprseq() && match(")");
-			else // EPSILON
-				return true;
-		} else {
-			return true;
+			if (first.equals("(")){
+				match("("); temp = exprseq(); match(")");
+			}
 		}
 	}
 	
-	public boolean exprseq() {
+	public node exprseq() {
         System.out.println("exprseq");
 		String first = checkFIRST("exprseq");
-		if (first != null)
-			return expr() && exprseq_r();
-		else //Epsilon
-			return true;
+		if (first != null){
+			expr(); exprseq_r();
+		}
+		return null;
 	}
 	
-	public boolean exprseq_r() {
+	public void exprseq_r() {
         System.out.println("exprseq_r");
 		String first = checkFIRST("exprseq_r");
 		if (first != null)
-			return match(",") && exprseq();
-		else //Epsilon
-			return true;
+			match(","); exprseq();
 	}
 	
-	public boolean bexpr() {
+	public node bexpr() {
         System.out.println("bexpr");
         String first = checkFIRST("bexpr");
-        // System.out.print(first);
-		if (first != null)
-			return bterm() && bterm_r();
-		else
-			return false;
+		// System.out.print(first);
+		node temp = new node("bexpr");
+		if (first != null){
+			temp.setLeft(bterm()); temp.setRight(bterm_r());
+			return temp;
+		}
+		return null;
+			
 	}
 	
-	public boolean bterm_r() {
+	public node bterm_r() {
         System.out.println("bterm_r");
 		String first = checkFIRST("bterm_r");
-		if (first != null)
-			return match("or") && bterm() && bterm_r();
-		else //Epsilon
-			return true;
+		node temp = new node("bterm_r");
+		if (first != null){
+			match("or"); temp.setLeft(bterm()); temp.setRight(bterm_r());
+			return temp;
+		}
+		return null;
 	}
 	
-	public boolean bterm() {
+	public node bterm() {
         System.out.println("bterm");
 		String first = checkFIRST("bterm");
-		if (first != null)
-			return bfactor() && bfactor_r();
-		else
-			return false;
+		node temp = new node("bterm");
+		if (first != null){
+			temp.setLeft(bfactor()); temp.setRight(bfactor_r());
+			return temp;
+		}
+		return null;
 	}
 	
-	public boolean bfactor_r() {
+	public node bfactor_r() {
         System.out.println("bfactor_r");
 		String first = checkFIRST("bfactor_r");
-		if (first != null)
-			return match("and") && bfactor() && bfactor_r();
-		else //Epsilon
-			return true;
+		node temp = new node("bfactor_r");
+		if (first != null){
+			match("and"); temp.setLeft(bfactor()); temp.setRight(bfactor_r());
+			return temp;
+		}
+		return null;
 	}
 	
-	public boolean bfactor() {
+	public node bfactor() {
         System.out.println("bfactor");
 		String first = checkFIRST("bfactor");
+		node temp = new node("bfactor");
 		switch (first) {
 			case "(":
-				return match("(") && bfactor_r_p() && match(")");
+				match("("); temp.setLeft(bfactor_r_p());match(")");
+				return temp;
 			case "not":
-				return match("not") && bfactor();
-			default:
-				return false;
+				match("not"); temp.setLeft(bfactor());
+				return temp;
 		}
+		return null;
 	}
 	
 	// Careful
-	public boolean bfactor_r_p() {
+	public node bfactor_r_p() {
         System.out.println("bfactor_r_p");
 		String first = checkFIRST("bfactor_r_p");
+		node temp = new node("bfactor_r_p");
 		if (FIRST.get("bfactor_r_p").contains(first) && token.getRepresentation().equals("COMPARATOR")){
-			return expr() && comp() && expr();
-        }else if (FIRST.get("bfactor_r_p").contains(first))
-			return bexpr();
-		else 
-			return false;
+			temp.setLeft(expr()); temp.setValue(comp()); temp.setRight(expr());
+			return temp;
+        }else if (FIRST.get("bfactor_r_p").contains(first)){
+			temp.setLeft(bexpr());
+			return temp;
+		}
+		return null;
 	}
 	
-	public boolean comp() {
+	public String comp() {
         System.out.println("comp");
         String first = checkFIRST("comp");
         // System.out.println(first);
         if (first != null){
             // System.out.println("return match");
-			return match("COMPARATOR");
-        }else{
-            return false;
-        }
+			match("COMPARATOR");
+			return lookahead.getName();
+		}
+		return "";
 	}
 	
-	public boolean var() {
+	public node var() {
         System.out.println("var");
 		String first = checkFIRST("var");
 		if (first != null)
@@ -714,24 +814,35 @@ public class Parser {
                 if(checkTableName(lookahead.getName()) == false){
 					if(getSymbolTable(currentFuncName).contains(currentName) == false){
 						getSymbolTable(currentFuncName).addSymbol(lookahead);
-						System.out.println("token type:" + token.value);
-						getSymbolTable(currentFuncName).getSymbol(lookahead.getName()).setType(token.value);
+						System.out.println("lookahead name:" + currentName);
+						System.out.println("last type:" + getLastType);
+						getSymbolTable(currentFuncName).getSymbol(lookahead.getName()).setType(getLastType);
 					}
                 }
-            } // ELSE add to global table
-			return match() && var_r();
+            }else{
+				if(getSymbolTable("global").contains(currentName) == false){
+					getSymbolTable("global").addSymbol(lookahead);
+					getSymbolTable("global").getSymbol(lookahead.getName()).setType(getLastType);
+				}
+			} 
+			System.out.println("HERE AGAIN");
+			System.out.println("1:"+lookahead.getName());
+			match();
+			System.out.println("2:"+lookahead.getName());
+			// match();
+			// var_r();
+			return new node(lookahead.getName());
 		}
-		else
-			return false;
+		return null;
 	}
 	
-	public boolean var_r() {
+	public void var_r() {
         System.out.println("var_r");
 		String first = checkFIRST("var_r");
-		if (first != null)
-			return match("[") && expr() && match("]");
-		else //Epsilon
-			return true;
+		if (first != null){
+			
+			 match("["); expr(); match("]");
+		}
 	}
 	
 	// UTILITY FUNCTIONS
@@ -770,7 +881,7 @@ public class Parser {
 	
 	public boolean match() {
         prettyPrint(lookahead.getRepresentation());
-        
+		System.out.println("the dumb function");
 		consumeToken();
 		return true;
 	}
@@ -782,7 +893,9 @@ public class Parser {
         if (isMatch){ 
             prettyPrint(String.valueOf(c));
             consumeToken();
-        }
+        }else{
+			System.exit(0);
+		}
 		return isMatch;
 	}
 
@@ -799,6 +912,7 @@ public class Parser {
 	public boolean match(String s) {
 		s = fixComparator(s);
 		System.out.println("string tomatch:" + s);
+		System.out.println("debug:" + lookahead.getName());
 		System.out.println("string we are matching to:" + lookahead.getRepresentation());
         boolean isMatch = lookahead.getRepresentation().equals(s);
         // System.out.println(token.getString());
@@ -812,6 +926,8 @@ public class Parser {
 				currentFuncName = null;
 			
 			consumeToken();
+		}else{
+			System.exit(0);
 		}
 		return isMatch;
     }
@@ -831,10 +947,10 @@ public class Parser {
                 }
             }else if(currentFuncName == null){
                 //add to main
-                createSymbolTable("main");
-                if(getSymbolTable("main").contains(lookahead.getName())== false){
-                    getSymbolTable("main").addSymbol(lookahead);
-                }
+                // createSymbolTable("main");
+                // if(getSymbolTable("main").contains(lookahead.getName())== false){
+                //     getSymbolTable("main").addSymbol(lookahead);
+                // }
             }
             s = lookahead.getName();
             addSpace = "";
