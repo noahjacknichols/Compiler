@@ -365,23 +365,13 @@ public class Parser {
     }
 
     public static void main(String[] args) throws IOException {
-        // System.out.println("Here");
 		Parser parser = new Parser();
     }
     public Parser() throws IOException {
-        // System.out.println("HERE");
         initializeFIRST();
         initializeFOLLOW();
-        // lexer.readInput();
-        // lexer.printTokens();
-        // System.out.println("initialized FIRST");
-        boolean validParse = true; 
         consumeToken();
-        // if(token.getName().equals("def") == false){
-        //     System.out.println("error");
-        // }
         consumeToken(); // Twice to initialize token & lookahead
-		// System.out.println("consumed two tokens");
 		
 		
 		node start = program();
@@ -400,22 +390,6 @@ public class Parser {
 	}
 	
 	public node eval(node start){
-		// System.out.println("in eval");
-		// System.out.println("-------------------------------");
-		// printTree(start);
-
-		// for(int i = 0; i < functionNodes.size(); i++){
-		// 	System.out.println(i);
-		// 	System.out.println(functionNodes.get(i).getValue());
-		// 	System.out.println("--------------------------");
-		// 	printTree(functionNodes.get(i));
-		// }
-		
-		//do every statement in currentNode & update symboltables with values for stuff
-		//
-		// System.out.println("start node is:" + start.type);
-		// System.out.println("beginning statements");
-		// System.out.println("sizeof childs:" +start.nodes.size());
 		for(int i = 0;i < start.nodes.size(); i++){
 			//do each statement
 			node x = doStatement(start.nodes.get(i), start);
@@ -426,21 +400,13 @@ public class Parser {
 		return null;
 	}
 	public node doStatement(node state, node start){
-		// System.out.println("dostatement");
-		// System.out.println("value is:" +state.getValue());
 		node toReturn = null;
-		// System.out.println("symboltable size:"+start.getSymbolTable().symbols.size());
 		if(state.getValue().equals("=")){
 			//set variable = num in symtable
-			// System.out.println("in =");
-			// System.out.println("right is: "+state.getRight().type);
 			String x = evalExpr(state.getRight(),start);
-			// System.out.println(state.getLeft().getValue());
 			start.nodeTable.setValue(state.getLeft().getValue(), x);
-			// System.out.println("x is:" + x);
 
 		}else if(state.getValue().equals("IF")){
-			// System.out.println("left is:" +state.getLeft().value);
 			printTree(state.getLeft());
 			if(evalCond(state.getLeft(), start)){
 				//do those statements
@@ -462,10 +428,8 @@ public class Parser {
 					}
 				}
 			}
-		}else if(state.getValue().equals("WHILE")){
-			// System.out.println(state.getLeft().value);			
+		}else if(state.getValue().equals("WHILE")){			
 			while(evalCond(state.getLeft(), start)){
-				// System.out.println("while condition holds true");
 				for(int i = 0; i < state.nodes.size();i++){
 					node x = doStatement(state.nodes.get(i), start);
 					if(x != null){
@@ -476,14 +440,11 @@ public class Parser {
 		}else if(state.getValue().equals("PRINT")){
 			System.out.println(evalExpr(state.getLeft(), start));
 		}else if(state.getValue().equals("RETURN")){
-			//return in global should be wrong 
-			// System.out.println("returning");
 			toReturn = new node("return");
 			toReturn.setValue(evalExpr(state.getLeft(), start));
 			return toReturn;
 			
 		}else if(findFunctionNode(state.getValue())!= null){
-			//run a train on func
 			symbolTable funcTable = getSymbolTable(state.getValue());
 			ArrayList<String> params = state.nodeTable.getParameters();
 			if(params.size() != state.nodes.size()){
@@ -499,19 +460,12 @@ public class Parser {
 			eval(newNode);
 			
 		}
-		// System.out.println("symboltable size:"+start.getSymbolTable().symbols.size());
-		// start.getSymbolTable().printSymbolTable();
 		return null;
 		
 	}
 
 
 	public boolean evalCond(node state, node start){
-		// System.out.println("evalCond");
-		// System.out.println(state.value);
-		// System.out.println(state.getLeft().type +" "+state.getRight().type);
-		// String l = evalExpr(state.getLeft(), start);
-		// String r = evalExpr(state.getRight(), start);
 		
 		if(state.getValue().equals("<")){
 			String l = evalExpr(state.getLeft(), start);
@@ -563,12 +517,9 @@ public class Parser {
 	}
 
 	public String evalExpr(node state, node start){
-		// String[] op = ["+", "-", "/", "*", "%"];
-		// System.out.println("state value is:" + state.value);
 		if(state.getValue().equals("+")){
 			String left = evalExpr(state.getLeft(), start);
 			String right = evalExpr(state.getRight(), start);
-			
 			
 			if(left == ""){
 				return right;
@@ -603,12 +554,9 @@ public class Parser {
 		}else if(state.getValue().equals("*")){
 			String left = evalExpr(state.getLeft(), start);
 			String right = evalExpr(state.getRight(), start);
-			int l;
-			
 			
 			if(left == ""){
 				return right;
-				//get right val
 			}else if(right == ""){
 				return left;
 
@@ -621,12 +569,10 @@ public class Parser {
 		}else if(state.getValue().equals("/")){
 			String left = evalExpr(state.getLeft(), start);
 			String right = evalExpr(state.getRight(), start);
-			int l;
 			
 			
 			if(left == ""){
 				return right;
-				//get right val
 			}else if(right == ""){
 				return left;
 
@@ -639,12 +585,10 @@ public class Parser {
 		}else if(state.getValue().equals("%")){
 			String left = evalExpr(state.getLeft(), start);
 			String right = evalExpr(state.getRight(), start);
-			int l;
 			
 			
 			if(left == ""){
 				return right;
-				//get right val
 			}else if(right == ""){
 				return left;
 
@@ -655,34 +599,25 @@ public class Parser {
 			}
 
 		}else if(findFunctionNode(state.getValue())!= null){
-			// System.out.println("THIS IS A FUNCTION");
 			symbolTable funcTable = getSymbolTable(state.getValue());
-			// System.out.println(funcTable.symbols.size());
-			// System.out.println(state.nodes.size());
 			ArrayList<String> params = funcTable.getParameters();
 			if(params.size() != state.nodes.size()){
-				// System.out.println("too many/too few params");
 				raiseError();
 			}
 			for(int i = 0; i < state.nodes.size(); i++){
 				funcTable.setValue(params.get(i),evalExpr(state.nodes.get(i), start));
 			}
-			// System.out.println("added params");
 			node newNode = findFunctionNode(state.getValue());
 			newNode.nodeTable = funcTable;
 
 			return evalExpr(eval(newNode), newNode);
 		}
 		else if(start.nodeTable.contains(state.getValue())){
-			//variable 
-			// System.out.println(state.getValue() + ":" + start.nodeTable.getSymbol(state.getValue()).value);
 			return start.nodeTable.getSymbol(state.getValue()).value;
 
 		}else if(isInt(state.getValue()) || isDouble(state.getValue())){
 			return state.getValue();
 		}
-		
-		// raiseError();
 		return "";
 	}
 
@@ -700,21 +635,6 @@ public class Parser {
 		}
 
 	}
-	// public double toDouble(String x){
-	// 	if(x == null || x == ""){
-	// 		return 0;
-	// 	}
-
-	// 	try{
-	// 		double d = Double.parseDouble(x);
-	// 		return d;
-
-	// 	}catch (NumberFormatException e){
-	// 		return 0;
-	// 	}
-
-	// }
-	
 	public boolean isInt(String x){
 		if(x == null || x == ""){
 			return false;
@@ -734,10 +654,6 @@ public class Parser {
 		}
 		return false;
 	}
-
-	// public computeSet(node state){
-	// 	i
-	// }
 
 	public void raiseError(){
 		System.exit(0);
@@ -761,13 +677,7 @@ public class Parser {
 					printTree(start.nodes.get(i));
 				}
 			}
-			// if(start.getValue().equals("%")){
-			// 	System.out.println("MOD");
-			// 	printTree()
-			// }
 
-		}else{
-			// System.out.println("node is null");
 		}
 	}
     
@@ -847,9 +757,7 @@ public class Parser {
 	public void fdec() {
         // System.out.println("fdec");
 		String first = checkFIRST("fdec");
-		// System.out.println("token is:"+ lookahead.getRepresentation().equals("def"));
 		if(first != null && lookahead.getRepresentation().equals("def")){
-			// System.out.println("lookahead is def");
 			node oldCurrent = currentNode;
 			node temp = new node("function");
 
@@ -858,7 +766,6 @@ public class Parser {
 			match("("); params(); match(")"); declarations(); statement_seq();
 			functionNodes.add(temp);
 			currentNode = oldCurrent; 
-			// System.out.println("MATCH FED PHASE"); 
 			match("fed"); match(';');
 		}
 	}
@@ -876,7 +783,6 @@ public class Parser {
 		String first = checkFIRST("params");
 		if (first != null){
 			type();
-			// System.out.println("IN PARAMS:"+ lookahead.getName());
 			String variable = lookahead.getName();
 
 			var();
@@ -901,7 +807,6 @@ public class Parser {
 		String first = checkFIRST("fname");
 		node temp = null;
 		if (first != null){
-			// System.out.println("FNAME");
 			currentName = lookahead.getName();
             currentFuncName = currentName;
 			createSymbolTable(currentFuncName);
@@ -909,11 +814,9 @@ public class Parser {
 				temp = new node(currentFuncName);
 				temp.setValue(currentFuncName);
 				functionNodes.add(new node(currentFuncName));
-			}else{ //may be issue
-				//this should probably crash
+			}else{ 
 				temp = findFunctionNode(currentFuncName);
 			}
-			// node temp = new node(currentFuncName);
 				
 			match("ID");
 			return temp;
@@ -944,22 +847,22 @@ public class Parser {
 		if(first != null){
 			match(";"); declarations();
 		}
-		// System.out.println("end of decl_r");
 	}
 	
 	public void type() {
         // System.out.println("type");
         String first = checkFIRST("type");
-        
-        if(lookahead.getRepresentation().equals("int")){
-			getLastType = "int";
-			match("int");
-			return;
-        }else if(lookahead.getRepresentation().equals("double")){
-			getLastType = "double";
-			match("double");
-			return;
-        }
+        if(first != null){
+			if(lookahead.getRepresentation().equals("int")){
+				getLastType = "int";
+				match("int");
+				return;
+			}else if(lookahead.getRepresentation().equals("double")){
+				getLastType = "double";
+				match("double");
+				return;
+			}
+		}
 	}
 	
 	public void statement_seq() {
@@ -989,7 +892,6 @@ public class Parser {
 		if (first != null){
 			match(","); varlist();
 		}
-		// System.out.println("varlist_r first empty");
 	}
 	
 	public node statement() {
@@ -1005,15 +907,12 @@ public class Parser {
 					match("=");
 					temp.setValue("=");
 					node r = expr();
-					// temp.setRight(expr());
-					// match();
 					temp.setLeft(l);
 					temp.setRight(r);
 					currentNode.nodes.add(temp);
 					return temp;
 				case "if":
 					match("if"); 
-					//set current global to temp;
 					temp.setValue("IF");
 					node lastCurrent = currentNode;
 					currentNode = temp;
@@ -1093,9 +992,7 @@ public class Parser {
 		String first = checkFIRST("term_r");
 		node temp = new node("term_r");
 		if (first != null) {
-			// System.out.println("first not null");
 			if (first.equals("+")){
-				// System.out.println("+");
 				temp.setValue("+");
 				match("+");
 				node l = term();
@@ -1109,7 +1006,6 @@ public class Parser {
 
 				return temp;
 			}else if (first.equals("-")){
-				// System.out.println("-");
 				temp.setValue("-");
 				match("-") ;
 				node l = term();
@@ -1125,7 +1021,7 @@ public class Parser {
 				temp.setValue(lookahead.getName());
 				match();
 				raiseError();
-				return temp; // need to fail here
+				return temp; 
 			}
 		} else { //Epsilon
 			return null;
@@ -1193,8 +1089,6 @@ public class Parser {
 						temp.setLeft(l);
 						temp.setRight(r);
 					}
-					// temp.setLeft(l);
-					// temp.setRight(factor_r());
 					return temp;
 				default:
 					return null;
@@ -1209,7 +1103,6 @@ public class Parser {
 		node temp = new node("factor");
 		if (first != null) {
 			if (first.equals("ID")){
-				// System.out.println("factor ID " + lookahead.getName());
 				temp.value = lookahead.value;
 				
 				if(hasSymbolTable(lookahead.getName())){
@@ -1218,7 +1111,6 @@ public class Parser {
 					currentNode = temp;
 
 					match("ID"); 
-					// System.out.println("ID HAS SYMTABLE");
 					factor_r_p();
 					
 					currentNode = oldCurrent;
@@ -1228,9 +1120,8 @@ public class Parser {
 				match("ID"); 
 				
 
-				return temp; //if is function call this factor_r_p();
+				return temp;
 			}else if (first.equals("NUMBER")){
-				// System.out.println("look is:" +lookahead.getName());
 				temp.setValue(lookahead.getName());
 				match("NUMBER");
 				return temp;
@@ -1241,7 +1132,6 @@ public class Parser {
 			}else if (first.equals("ID")){
 				return var();
 			}else{
-				// temp.setValue("error on here");
 				return temp;
 			}
 		} else {
@@ -1261,7 +1151,6 @@ public class Parser {
 				return temp;
 			}
 		}
-		// System.out.println("factor_r_p first null");
 		return null;
 	}
 	
@@ -1295,7 +1184,6 @@ public class Parser {
 	public node bexpr() {
         // System.out.println("bexpr");
         String first = checkFIRST("bexpr");
-		// System.out.print(first);
 		node temp = new node("bexpr");
 		if (first != null){
 			node l = bterm();
@@ -1345,7 +1233,6 @@ public class Parser {
 				r.setLeft(l);
 				temp = r;
 			}
-			// temp.setLeft(bfactor()); temp.setRight(bfactor_r());
 			return temp;
 		}
 		return null;
@@ -1366,7 +1253,6 @@ public class Parser {
 				r.setLeft(l);
 				temp.setRight(r);
 			}
-			// temp.setLeft(bfactor()); temp.setRight(bfactor_r());
 			return temp;
 		}
 		return null;
@@ -1393,7 +1279,6 @@ public class Parser {
 	
 	// Careful
 	public node bfactor_r_p() {
-        // System.out.println("bfactor_r_p");
 		String first = checkFIRST("bfactor_r_p");
 		node temp = new node("bfactor_r_p");
 		if (FIRST.get("bfactor_r_p").contains(first) && token.getRepresentation().equals("COMPARATOR")){
@@ -1411,7 +1296,6 @@ public class Parser {
         String first = checkFIRST("comp");
         // System.out.println(first);
         if (first != null){
-			// System.out.println("return match");
 			String c = lookahead.getName();
 			match("COMPARATOR");
 			return c;
@@ -1427,14 +1311,9 @@ public class Parser {
 			currentName = lookahead.getName();
 			
 			if (currentFuncName != null){
-                // System.out.println("HERE\n");
-                // printSymbolTables();
-                // System.out.println("token is:"+  lookahead.getName());
                 if(checkTableName(lookahead.getName()) == false){
 					if(getSymbolTable(currentFuncName).contains(currentName) == false){
 						getSymbolTable(currentFuncName).addSymbol(lookahead);
-						// System.out.println("lookahead name:" + currentName);
-						// System.out.println("last type:" + getLastType);
 						getSymbolTable(currentFuncName).getSymbol(lookahead.getName()).setType(getLastType);
 					}
                 }
@@ -1453,7 +1332,6 @@ public class Parser {
 	}
 	
 	public void var_r() {
-        // System.out.println("var_r");
 		String first = checkFIRST("var_r");
 		if (first != null){
 			
@@ -1477,8 +1355,6 @@ public class Parser {
 	
 	public String checkFIRST(String nonterminal) {
         List<String> first = FIRST.get(nonterminal);
-        // System.out.println(first);
-        // System.out.println("token:" +token.getRepresentation()+", lookahead:" + lookahead.getRepresentation());
 		if (first != null) {
 			if (lookahead.getRepresentation().equals("int") && first.contains("ID")) {
 				return "ID";
@@ -1503,8 +1379,6 @@ public class Parser {
 	}
 	
 	public boolean match(char c) {
-		// System.out.println("character tomatch:" + c);
-		// System.out.println("character we are matching to:" + lookahead.getRepresentation());
 		boolean isMatch = lookahead.getRepresentation().equals(String.valueOf(c));
         if (isMatch){ 
             prettyPrint(String.valueOf(c));
@@ -1527,13 +1401,8 @@ public class Parser {
 	
 	public boolean match(String s) {
 		s = fixComparator(s);
-		// System.out.println("string tomatch:" + s);
-		// System.out.println("debug:" + lookahead.getName());
-		// System.out.println("string we are matching to:" + lookahead.getRepresentation());
+
         boolean isMatch = lookahead.getRepresentation().equals(s);
-        // System.out.println(token.getString());
-        // System.out.println("MATCHING: " + s + " lookahead:"+lookahead.getRepresentation());
-        // System.out.println(isMatch);
 		if (isMatch) 
 		{
             prettyPrint(s);
