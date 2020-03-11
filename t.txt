@@ -1,6 +1,8 @@
-int x;
-while(x < 10) do
+int x, i;
 x = 0;
-y=1;
-od
+i = 1;
+while (i < 100) do
+print i;
+i = i +1;
+od;
 .

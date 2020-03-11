@@ -65,6 +65,7 @@ class symbol {
 	public int id;
 	public String value = "";
 	public String type = "";
+	public boolean parameter = false;
 
 	public symbol(final token tok, final int ID) {
 		symbolToken = tok;
@@ -77,6 +78,10 @@ class symbol {
 
 	public int getSymbolID() {
 		return id;
+	}
+	public void setParam(){
+
+		this.parameter = true;
 	}
 
 	@Override
@@ -92,7 +97,16 @@ class symbol {
     }
     public String printSymbol(){
         // return "hello";
-        return this.symbolToken.getName() + ", " + this.id + ", " + this.type + ", " + this.value;
+		String x = this.symbolToken.getName() + ", " + this.id + ", " + this.type + ", ";
+		if(this.value.equals("")!= true){
+			x = x + this.value;
+		}else{
+			x = x + "NaN";
+		}
+		if(this.parameter == true){
+			x = x + ", PARAM";
+		}
+		return x;
 	}
 	public void setValue(String s){
 		this.value = s;
@@ -118,7 +132,23 @@ class symbolTable {
     }
     public String getName(){
         return this.name;
-    }
+	}
+	public void setParameter(String s){
+		if(this.contains(s)){
+			this.getSymbol(s).setParam();
+		}
+
+	}
+	public ArrayList<String> getParameters(){
+		ArrayList<String> p = new ArrayList<String>();
+		for(int i = 0; i < this.symbols.size(); i++){
+			if(this.symbols.get(i).parameter == true){
+				p.add(this.symbols.get(i).getSymbolToken().getName());
+
+			}
+		}
+		return p;
+	}
 
 	public void init(final List<String> initials) {
         for (final String term : initials) {
@@ -161,6 +191,11 @@ class symbolTable {
 	public symbol getSymbol(String name){
 		return this.symbols.get(this.index(name));
 	}
+	public void setValue(String name, String val){
+		if(this.contains(name)){
+			this.getSymbol(name).value = val;
+		}
+	}
 
 }
 
@@ -170,10 +205,12 @@ class node{
 	node right = null;
 	node left = null;
 	String value = "";
+	symbolTable nodeTable;
 	public ArrayList<node> nodes = new ArrayList<node>();
-	ArrayList<token> conditional = new ArrayList<token>(); // x <> y 
+	 
 	public node(String Type){
 		this.type = Type;
+		this.nodeTable = new symbolTable(Type);
 		
 	}
 	public void setValue(String value){
@@ -186,11 +223,39 @@ class node{
 	public void setRight(node right){
 		this.right = right;
 	}
+	public ArrayList<node> getNodes(){
+		return this.nodes;
+	}
+	public String getValue(){
+		return this.value;
+	}
 	public void addNode(node n){
 		nodes.add(n);
 	}
 	public node getNode(int index){
 		return nodes.get(index);
+	}
+	public node getLeft(){
+		if(this.left != null){
+			return this.left;
+		}
+		return null;
+	}
+	public node getRight(){
+		if(this.right != null){
+			return this.right;
+		}
+		return null;
+	}
+	public void cloneTable(symbolTable sym){
+		this.nodeTable = null;
+		this.nodeTable = new symbolTable(sym.getName());
+		for(int i = 0; i < sym.symbols.size(); i++){
+			this.nodeTable.addSymbol(sym.symbols.get(i).getSymbolToken());
+		}
+	}
+	public symbolTable getSymbolTable(){
+		return this.nodeTable;
 	}
 
 }
@@ -210,9 +275,21 @@ public class Parser {
 	public static ArrayList<symbolTable> symboltables = new ArrayList<symbolTable>();
 	String getLastType = "";
 	node currentNode = null;
+	node returnable = null;
+
 	// createSymbolTable("global");
 	
 	public static ArrayList<node> functionNodes = new ArrayList<node>();
+	public node findFunctionNode(String fname){
+		// System.out.println("we have " + functionNodes.size() + " functions");
+		for(int i = 0; i < functionNodes.size(); i++){
+			// System.out.println("function:" + functionNodes.get(i).getValue());
+			if(functionNodes.get(i).getValue().equals(fname)){
+				return functionNodes.get(i);
+			}
+		}
+		return null;
+	}
 
 	private void initializeFIRST() {
         FIRST.put("program", Arrays.asList("def", "int", "double", "if", "while", "print", "return", "ID"));
@@ -298,7 +375,7 @@ public class Parser {
         // lexer.readInput();
         // lexer.printTokens();
         // System.out.println("initialized FIRST");
-        boolean validParse = true;
+        boolean validParse = true; 
         consumeToken();
         // if(token.getName().equals("def") == false){
         //     System.out.println("error");
@@ -307,19 +384,392 @@ public class Parser {
 		// System.out.println("consumed two tokens");
 		
 		
-		program();
+		node start = program();
+		start.nodeTable = getSymbolTable("global");
+
+		
 		
 		// System.out.println("\nValid Parse: " + validParse);
-		
-		if (validParse)
-		{
-            // System.out.println("successful parse.");
-            printSymbolTables();
+		System.out.println("successful parse.");
+		System.out.println("-----------------------");
+		if(start !=null){
+			eval(start);
+		}
+		printSymbolTables();
 			
+	}
+	
+	public node eval(node start){
+		// System.out.println("in eval");
+		// System.out.println("-------------------------------");
+		// printTree(start);
+
+		// for(int i = 0; i < functionNodes.size(); i++){
+		// 	System.out.println(i);
+		// 	System.out.println(functionNodes.get(i).getValue());
+		// 	System.out.println("--------------------------");
+		// 	printTree(functionNodes.get(i));
+		// }
+		
+		//do every statement in currentNode & update symboltables with values for stuff
+		//
+		// System.out.println("start node is:" + start.type);
+		// System.out.println("beginning statements");
+		// System.out.println("sizeof childs:" +start.nodes.size());
+		for(int i = 0;i < start.nodes.size(); i++){
+			//do each statement
+			node x = doStatement(start.nodes.get(i), start);
+			if(x != null){
+				return x;
+			}
+		}
+		return null;
+	}
+	public node doStatement(node state, node start){
+		// System.out.println("dostatement");
+		// System.out.println("value is:" +state.getValue());
+		node toReturn = null;
+		// System.out.println("symboltable size:"+start.getSymbolTable().symbols.size());
+		if(state.getValue().equals("=")){
+			//set variable = num in symtable
+			// System.out.println("in =");
+			// System.out.println("right is: "+state.getRight().type);
+			String x = evalExpr(state.getRight(),start);
+			// System.out.println(state.getLeft().getValue());
+			start.nodeTable.setValue(state.getLeft().getValue(), x);
+			// System.out.println("x is:" + x);
+
+		}else if(state.getValue().equals("IF")){
+			// System.out.println("left is:" +state.getLeft().value);
+			printTree(state.getLeft());
+			if(evalCond(state.getLeft(), start)){
+				//do those statements
+				for(int i = 0; i < state.nodes.size(); i++){
+					node x = doStatement(state.nodes.get(i), start);
+					if(x != null){
+						return x;
+					}
+				}
+			}else{
+				if(state.getRight() != null){
+					if(state.getRight().nodes.size() > 0){
+						for(int i = 0; i < state.getRight().nodes.size(); i++){
+							node x = doStatement(state.getRight().nodes.get(i), start);
+							if(x != null){
+								return x;
+							}
+						}
+					}
+				}
+			}
+		}else if(state.getValue().equals("WHILE")){
+			// System.out.println(state.getLeft().value);			
+			while(evalCond(state.getLeft(), start)){
+				// System.out.println("while condition holds true");
+				for(int i = 0; i < state.nodes.size();i++){
+					node x = doStatement(state.nodes.get(i), start);
+					if(x != null){
+						return x;
+					}
+				}
+			}
+		}else if(state.getValue().equals("PRINT")){
+			System.out.println(evalExpr(state.getLeft(), start));
+		}else if(state.getValue().equals("RETURN")){
+			//return in global should be wrong 
+			// System.out.println("returning");
+			toReturn = new node("return");
+			toReturn.setValue(evalExpr(state.getLeft(), start));
+			return toReturn;
+			
+		}else if(findFunctionNode(state.getValue())!= null){
+			//run a train on func
+			symbolTable funcTable = getSymbolTable(state.getValue());
+			ArrayList<String> params = state.nodeTable.getParameters();
+			if(params.size() != state.nodes.size()){
+				// System.out.println("too many/too few params");
+				raiseError();
+			}
+			for(int i = 0; i < state.nodes.size(); i++){
+				funcTable.setValue(params.get(i),state.nodes.get(i).getValue());
+			}
+			node newNode = findFunctionNode(state.getValue());
+			newNode.nodeTable = funcTable;
+
+			eval(newNode);
+			
+		}
+		// System.out.println("symboltable size:"+start.getSymbolTable().symbols.size());
+		// start.getSymbolTable().printSymbolTable();
+		return null;
+		
+	}
+
+
+	public boolean evalCond(node state, node start){
+		// System.out.println("evalCond");
+		// System.out.println(state.value);
+		// System.out.println(state.getLeft().type +" "+state.getRight().type);
+		// String l = evalExpr(state.getLeft(), start);
+		// String r = evalExpr(state.getRight(), start);
+		
+		if(state.getValue().equals("<")){
+			String l = evalExpr(state.getLeft(), start);
+			String r = evalExpr(state.getRight(), start);
+			if(isInt(l) && isInt(r)){return (Integer.parseInt(l) < Integer.parseInt(r)); }
+			else if(isDouble(l) && isDouble(r)){return (Double.parseDouble(l) < Double.parseDouble(r));}
+			else{raiseError();}
+
+		}else if(state.getValue().equals(">")){
+			String l = evalExpr(state.getLeft(), start);
+			String r = evalExpr(state.getRight(), start);
+			if(isInt(l) && isInt(r)){return (Integer.parseInt(l) > Integer.parseInt(r)); }
+			else if(isDouble(l) && isDouble(r)){return (Double.parseDouble(l) > Double.parseDouble(r));}
+			else{raiseError();}
+
+		}else if(state.getValue().equals("<=")){
+			String l = evalExpr(state.getLeft(), start);
+			String r = evalExpr(state.getRight(), start);
+			if(isInt(l) && isInt(r)){return (Integer.parseInt(l) <= Integer.parseInt(r)); }
+			else if(isDouble(l) && isDouble(r)){return (Double.parseDouble(l) <= Double.parseDouble(r));}
+			else{raiseError();}
+
+		}else if(state.getValue().equals(">=")){
+			String l = evalExpr(state.getLeft(), start);
+			String r = evalExpr(state.getRight(), start);
+			if(isInt(l) && isInt(r)){return (Integer.parseInt(l) >= Integer.parseInt(r)); }
+			else if(isDouble(l) && isDouble(r)){return (Double.parseDouble(l) >= Double.parseDouble(r));}
+			else{raiseError();}
+		}else if(state.getValue().equals("==")){
+			String l = evalExpr(state.getLeft(), start);
+			String r = evalExpr(state.getRight(), start);
+			if(isInt(l) && isInt(r)){return (Integer.parseInt(l) == Integer.parseInt(r)); }
+			else if(isDouble(l) && isDouble(r)){return (Double.parseDouble(l) == Double.parseDouble(r));}
+			else{raiseError();}
+		}else if(state.getValue().equals("<>")){
+			String l = evalExpr(state.getLeft(), start);
+			String r = evalExpr(state.getRight(), start);
+			if(isInt(l) && isInt(r)){return (Integer.parseInt(l) != Integer.parseInt(r)); }
+			else if(isDouble(l) && isDouble(r)){return (Double.parseDouble(l) != Double.parseDouble(r));}
+			else{raiseError();}
+		}else if(state.getValue().equals("and")){
+			return evalCond(state.getLeft(), start) && evalCond(state.getRight(),start);
+		}else if(state.getValue().equals("or")){
+			return evalCond(state.getLeft(), start) || evalCond(state.getRight(), start);
+		}else if(state.getValue().equals("not")){
+			return evalCond(state.getLeft(), start) != true;
+		}
+		return false;
+	}
+
+	public String evalExpr(node state, node start){
+		// String[] op = ["+", "-", "/", "*", "%"];
+		// System.out.println("state value is:" + state.value);
+		if(state.getValue().equals("+")){
+			String left = evalExpr(state.getLeft(), start);
+			String right = evalExpr(state.getRight(), start);
+			
+			
+			if(left == ""){
+				return right;
+				//get right val
+			}else if(right == ""){
+				return left;
+
+			}else{
+				if(isInt(left) && isInt(right)){return ""+ (Integer.parseInt(left) + Integer.parseInt(right)); }
+				else if(isDouble(left) && isDouble(right)){return ""+ (Double.parseDouble(left) + Double.parseDouble(right));}
+				else{raiseError();}
+			}
+
+		}else if(state.getValue().equals("-")){
+			String left = evalExpr(state.getLeft(), start);
+			String right = evalExpr(state.getRight(), start);
+			int l;
+			
+			
+			if(left == ""){
+				return right;
+				//get right val
+			}else if(right == ""){
+				return left;
+
+			}else{
+				if(isInt(left) && isInt(right)){return ""+ (Integer.parseInt(left) - Integer.parseInt(right)); }
+				else if(isDouble(left) && isDouble(right)){return ""+ (Double.parseDouble(left) - Double.parseDouble(right));}
+				else{raiseError();}
+			}
+
+		}else if(state.getValue().equals("*")){
+			String left = evalExpr(state.getLeft(), start);
+			String right = evalExpr(state.getRight(), start);
+			int l;
+			
+			
+			if(left == ""){
+				return right;
+				//get right val
+			}else if(right == ""){
+				return left;
+
+			}else{
+				if(isInt(left) && isInt(right)){return ""+ (Integer.parseInt(left) * Integer.parseInt(right)); }
+				else if(isDouble(left) && isDouble(right)){return ""+ (Double.parseDouble(left) * Double.parseDouble(right));}
+				else{raiseError();}
+			}
+
+		}else if(state.getValue().equals("/")){
+			String left = evalExpr(state.getLeft(), start);
+			String right = evalExpr(state.getRight(), start);
+			int l;
+			
+			
+			if(left == ""){
+				return right;
+				//get right val
+			}else if(right == ""){
+				return left;
+
+			}else{
+				if(isInt(left) && isInt(right)){return ""+ (Integer.parseInt(left) / Integer.parseInt(right)); }
+				else if(isDouble(left) && isDouble(right)){return ""+ (Double.parseDouble(left) / Double.parseDouble(right));}
+				else{raiseError();}
+			}
+
+		}else if(state.getValue().equals("%")){
+			String left = evalExpr(state.getLeft(), start);
+			String right = evalExpr(state.getRight(), start);
+			int l;
+			
+			
+			if(left == ""){
+				return right;
+				//get right val
+			}else if(right == ""){
+				return left;
+
+			}else{
+				if(isInt(left) && isInt(right)){return ""+ (Integer.parseInt(left) % Integer.parseInt(right)); }
+				else if(isDouble(left) && isDouble(right)){return ""+ (Double.parseDouble(left) % Double.parseDouble(right));}
+				else{raiseError();}
+			}
+
+		}else if(findFunctionNode(state.getValue())!= null){
+			// System.out.println("THIS IS A FUNCTION");
+			symbolTable funcTable = getSymbolTable(state.getValue());
+			// System.out.println(funcTable.symbols.size());
+			// System.out.println(state.nodes.size());
+			ArrayList<String> params = funcTable.getParameters();
+			if(params.size() != state.nodes.size()){
+				// System.out.println("too many/too few params");
+				raiseError();
+			}
+			for(int i = 0; i < state.nodes.size(); i++){
+				funcTable.setValue(params.get(i),evalExpr(state.nodes.get(i), start));
+			}
+			// System.out.println("added params");
+			node newNode = findFunctionNode(state.getValue());
+			newNode.nodeTable = funcTable;
+
+			return evalExpr(eval(newNode), newNode);
+		}
+		else if(start.nodeTable.contains(state.getValue())){
+			//variable 
+			// System.out.println(state.getValue() + ":" + start.nodeTable.getSymbol(state.getValue()).value);
+			return start.nodeTable.getSymbol(state.getValue()).value;
+
+		}else if(isInt(state.getValue()) || isDouble(state.getValue())){
+			return state.getValue();
+		}
+		
+		// raiseError();
+		return "";
+	}
+
+	public boolean isDouble(String x){
+		if(x == null || x == ""){
+			return false;
+		}
+
+		try{
+			double d = Double.parseDouble(x);
+			return true;
+
+		}catch (NumberFormatException e){
+			return false;
+		}
+
+	}
+	// public double toDouble(String x){
+	// 	if(x == null || x == ""){
+	// 		return 0;
+	// 	}
+
+	// 	try{
+	// 		double d = Double.parseDouble(x);
+	// 		return d;
+
+	// 	}catch (NumberFormatException e){
+	// 		return 0;
+	// 	}
+
+	// }
+	
+	public boolean isInt(String x){
+		if(x == null || x == ""){
+			return false;
+		}
+
+		try{
+			int i = Integer.parseInt(x);
+			return true;
+
+		}catch (NumberFormatException e){
+			return false;
+		}
+	}
+	public boolean isVar(String s, node start){
+		if(start.nodeTable.contains(s)){
+			return true;
+		}
+		return false;
+	}
+
+	// public computeSet(node state){
+	// 	i
+	// }
+
+	public void raiseError(){
+		System.exit(0);
+	}
+
+
+
+	public void printTree(node start){
+		if(start != null){
+			if(start.getLeft() != null){
+				printTree(start.getLeft());
+			}
+			if(start.getValue() != ""){
+				System.out.println(start.getValue());
+			}
+			if(start.getRight() != null){
+				printTree(start.getRight());
+			}
+			if(start.getNodes() != null){
+				for(int i = 0; i < start.nodes.size(); i++){
+					printTree(start.nodes.get(i));
+				}
+			}
+			// if(start.getValue().equals("%")){
+			// 	System.out.println("MOD");
+			// 	printTree()
+			// }
+
 		}else{
-            System.out.println("error");
-        }
-    }
+			// System.out.println("node is null");
+		}
+	}
     
 
     public void createSymbolTable(String s){
@@ -374,40 +824,32 @@ public class Parser {
         return false;
     }
 
-    // public void addMainSymbolTable(){
-    //     createSymbolTable("main");
-    //     for(int i = 0; i < symboltables.size(); i++){
-    //         ArrayList<symbol> symbol = symboltables.get(i).getSymbols();
-    //         for(int j = 0; j < symbol.size(); j++){
 
-    //         }
-    //     }
-    // }
-
-
-    public void program() {
+    public node program() {
 		createSymbolTable("global");
 		node global = new node("global");
 		currentNode = global;
 		String first = checkFIRST("program");
 		if(first != null){
 			fdecls(); declarations(); statement_seq(); match('.');
+			return global;
 		}
+		return null;
 	}
 	
 	public void fdecls() {
-        System.out.println("fdecls");
+        // System.out.println("fdecls");
 		String first = checkFIRST("fdecls");
 		if(first != null)
 			fdec();fdec_r();
 	}
 	
 	public void fdec() {
-        System.out.println("fdec");
+        // System.out.println("fdec");
 		String first = checkFIRST("fdec");
-		System.out.println("token is:"+ lookahead.getRepresentation().equals("def"));
+		// System.out.println("token is:"+ lookahead.getRepresentation().equals("def"));
 		if(first != null && lookahead.getRepresentation().equals("def")){
-			System.out.println("lookahead is def");
+			// System.out.println("lookahead is def");
 			node oldCurrent = currentNode;
 			node temp = new node("function");
 
@@ -416,12 +858,13 @@ public class Parser {
 			match("("); params(); match(")"); declarations(); statement_seq();
 			functionNodes.add(temp);
 			currentNode = oldCurrent; 
-			System.out.println("MATCH FED PHASE"); match("fed"); match(';');
+			// System.out.println("MATCH FED PHASE"); 
+			match("fed"); match(';');
 		}
 	}
 	
 	public void fdec_r() {
-        System.out.println("fdec_r");
+        // System.out.println("fdec_r");
 		String first = checkFIRST("fdec_r");
 		if(first != null && lookahead.getRepresentation().equals("def")){
 			fdec(); fdec_r();
@@ -429,11 +872,15 @@ public class Parser {
 	}
 
 	public void params() {
-        System.out.println("params");
+        // System.out.println("params");
 		String first = checkFIRST("params");
 		if (first != null){
 			type();
+			// System.out.println("IN PARAMS:"+ lookahead.getName());
+			String variable = lookahead.getName();
+
 			var();
+			getSymbolTable(currentFuncName).setParameter(variable);
 			params_r();
 		}
 
@@ -441,7 +888,7 @@ public class Parser {
 	
 	
 	public void params_r() {
-        System.out.println("params_r");
+        // System.out.println("params_r");
 		String first = checkFIRST("params_r");
 		if (first != null){
 			match(",");
@@ -450,15 +897,23 @@ public class Parser {
 	}
 	
 	public node fname() {
-        System.out.println("fname");
+        // System.out.println("fname");
 		String first = checkFIRST("fname");
+		node temp = null;
 		if (first != null){
-			System.out.println("FNAME");
+			// System.out.println("FNAME");
 			currentName = lookahead.getName();
             currentFuncName = currentName;
 			createSymbolTable(currentFuncName);
-			functionNodes.add(new node(currentFuncName));
-			node temp = new node(currentFuncName);
+			if(findFunctionNode(currentFuncName) == null){
+				temp = new node(currentFuncName);
+				temp.setValue(currentFuncName);
+				functionNodes.add(new node(currentFuncName));
+			}else{ //may be issue
+				//this should probably crash
+				temp = findFunctionNode(currentFuncName);
+			}
+			// node temp = new node(currentFuncName);
 				
 			match("ID");
 			return temp;
@@ -468,7 +923,7 @@ public class Parser {
 	}
 	
 	public void declarations() {
-		System.out.println("declarations");
+		// System.out.println("declarations");
 		String first = checkFIRST("declarations");
 		if(first != null){
 			decl(); match(";"); declarations();
@@ -476,7 +931,7 @@ public class Parser {
 	}
 	
 	public void decl() {
-		System.out.println("decl");
+		// System.out.println("decl");
 		String first = checkFIRST("decl");
 		if(first != null){
 			type(); varlist();
@@ -484,16 +939,16 @@ public class Parser {
 	}
 	
 	public void decl_r() {
-		System.out.println("lookahead:" + lookahead.getName());
+		// System.out.println("lookahead:" + lookahead.getName());
 		String first = checkFIRST("decl_r");
 		if(first != null){
 			match(";"); declarations();
 		}
-		System.out.println("end of decl_r");
+		// System.out.println("end of decl_r");
 	}
 	
 	public void type() {
-        System.out.println("type");
+        // System.out.println("type");
         String first = checkFIRST("type");
         
         if(lookahead.getRepresentation().equals("int")){
@@ -511,12 +966,15 @@ public class Parser {
 		String first = checkFIRST("statement_seq");
 		
 		if(first != null){
-			statement(); statement_seq_r();
+			statement(); 
+			if(lookahead.getName().equals(";")){
+				match(";"); statement_seq();
+			}
 		}
 	}
 	
 	public void varlist() {
-		System.out.println("varlist");
+		// System.out.println("varlist");
 		String first = checkFIRST("varlist");
 		if (first != null){
 			var(); varlist_r();
@@ -526,27 +984,31 @@ public class Parser {
 
 	
 	public void varlist_r() {
-		System.out.println("varlist_r");
+		// System.out.println("varlist_r");
 		String first = checkFIRST("varlist_r");
 		if (first != null){
 			match(","); varlist();
 		}
-		System.out.println("varlist_r first empty");
+		// System.out.println("varlist_r first empty");
 	}
 	
 	public node statement() {
-        System.out.println("statement");
+        // System.out.println("statement");
 		String first = checkFIRST("statement");
 		node temp = new node("statement");
 		if(first != null){
 			switch(first) {
 				case "ID":
-					System.out.println("ID");
-					temp.setLeft(var());
+					// System.out.println("ID");
+					node l = var();
+					
 					match("=");
 					temp.setValue("=");
-					temp.setRight(expr());
+					node r = expr();
+					// temp.setRight(expr());
 					// match();
+					temp.setLeft(l);
+					temp.setRight(r);
 					currentNode.nodes.add(temp);
 					return temp;
 				case "if":
@@ -555,31 +1017,42 @@ public class Parser {
 					temp.setValue("IF");
 					node lastCurrent = currentNode;
 					currentNode = temp;
-					temp.setLeft(bexpr()); match("then"); statement_seq(); opt_else(); match("fi"); 
+					temp.setLeft(bexpr()); match("then"); statement_seq();
+					node elseNode = new node("ELSE");
+					//need to hotswap a else node onto this if there's a opt_else
+					currentNode = elseNode;
+					opt_else(); match("fi"); 
+
 					currentNode = lastCurrent;
+					temp.setRight(elseNode);
+					currentNode.nodes.add(temp);
 					return temp;
 				case "while":
 					temp.setValue("WHILE");
 					node lastCurrent2 = currentNode;
 					currentNode = temp;
 					
-					match("while"); temp.setLeft(bexpr()); match("do"); statement_seq(); match("od");
+					match("while"); node l2 = bexpr();temp.setLeft(l2); match("do"); statement_seq(); match("od");
 					currentNode = lastCurrent2;
+					currentNode.nodes.add(temp);
 					return temp;
 				case "print":
 					temp.setValue("PRINT");
 					match("print"); temp.setLeft(expr());
+					currentNode.nodes.add(temp);
 					return temp;
 				case "return":
 					temp.setValue("RETURN");
 					match("return"); temp.setLeft(expr());
+					currentNode.nodes.add(temp);
+					return temp;
 			}
 		}
 		return null;
 	}
 	
 	public void statement_seq_r() {
-        System.out.println("Statement_seq_r");
+        // System.out.println("Statement_seq_r");
 		String first = checkFIRST("statement_seq_r");
 
 		if(first != null){
@@ -588,7 +1061,7 @@ public class Parser {
 	}
 
 	public void opt_else() {
-        System.out.println("opt_else");
+        // System.out.println("opt_else");
 		String first = checkFIRST("opt_else");
 		if (first != null){
 			match("else"); statement_seq();
@@ -596,59 +1069,82 @@ public class Parser {
 	}
 	
 	public node expr(){
-        System.out.println("expr");
+        // System.out.println("expr");
 		String first = checkFIRST("expr");
 		node temp = new node("expr");
 		if (first != null){
-
-			temp.setLeft(term());
-			temp.setRight(term_r());
+			node l = term();
+			node r = term_r();
+			if(r == null){
+				temp = l;
+			}else{
+				r.setLeft(l);
+				temp = r;
+			}
 			return temp;
 		}else{
-			return temp;
+			return null;
 		}
 	}
 	
 	public node term_r() {
-		System.out.println("term_r");
+		// System.out.println("term_r");
 		
 		String first = checkFIRST("term_r");
 		node temp = new node("term_r");
 		if (first != null) {
-			System.out.println("first not null");
+			// System.out.println("first not null");
 			if (first.equals("+")){
-				System.out.println("+");
+				// System.out.println("+");
 				temp.setValue("+");
 				match("+");
-				temp.setLeft(term()); 
-				temp.setRight(term_r());
+				node l = term();
+				node r = term_r();
+				if(r == null){
+					temp.setRight(l);
+				}else{
+					r.setLeft(l);
+					temp.setRight(r);
+				}
 
 				return temp;
 			}else if (first.equals("-")){
-				System.out.println("-");
+				// System.out.println("-");
 				temp.setValue("-");
 				match("-") ;
-				temp.setLeft(term());
-				temp.setRight(term_r());
+				node l = term();
+				node r = term_r();
+				if(r == null){
+					temp.setRight(l);
+				}else{
+					r.setLeft(l);
+					temp.setRight(r);
+				}
 				return temp;
 			}else{
-				System.out.println("NOT RECURSIVE CALL");
 				temp.setValue(lookahead.getName());
 				match();
+				raiseError();
 				return temp; // need to fail here
 			}
 		} else { //Epsilon
-			return temp;
+			return null;
 		}
 	}
 	
 	public node term() {
-        System.out.println("term");
+        // System.out.println("term");
 		String first = checkFIRST("term");
 		node temp = new node("term");
 		if (first != null){
-			temp.setLeft(factor());
-			temp.setRight(factor_r());
+			node l = factor();
+			node r = factor_r();
+			if(r == null){
+				temp = l;
+			}else{
+				r.setLeft(l);
+				temp = r;
+			}
 			return temp;
 		}else{
 			return null;
@@ -656,20 +1152,49 @@ public class Parser {
 	}
 	
 	public node factor_r() {
-        System.out.println("factor_r");
+        // System.out.println("factor_r");
 		String first = checkFIRST("factor_r");
 		node temp = new node("factor_r");
 		if (first != null) {
 			switch(first) {
 				case "*":
 
-					match("*"); temp.setLeft(factor()); temp.setRight(factor_r());
+					match("*"); temp.setValue("*"); 
+					node l2 = factor();
+					node r2 = factor_r();
+					if(r2 == null){
+						temp.setRight(l2);
+					}else{
+						temp.setLeft(l2);
+						temp.setRight(r2);
+					}
 					return temp;
 				case "/":
-					match("/"); temp.setLeft(factor()); temp.setRight(factor_r());
+					match("/"); 
+					
+					temp.setValue("/");
+					node l1 = factor();
+					node r1 = factor_r();
+					if(r1 == null){
+						temp.setRight(l1);
+					}else{
+						temp.setLeft(l1);
+						temp.setRight(r1);
+					}
 					return temp;
 				case "%":
-					match("%"); temp.setLeft(factor()); temp.setRight(factor_r());
+					match("%");
+					temp.setValue("%");
+					node l = factor();
+					node r = factor_r();
+					if(r == null){
+						temp.setRight(l);
+					}else{
+						temp.setLeft(l);
+						temp.setRight(r);
+					}
+					// temp.setLeft(l);
+					// temp.setRight(factor_r());
 					return temp;
 				default:
 					return null;
@@ -679,26 +1204,34 @@ public class Parser {
 	}
 
 	 public node factor() {
-        System.out.println("factor");
+        // System.out.println("factor");
 		String first = checkFIRST("factor");
 		node temp = new node("factor");
 		if (first != null) {
 			if (first.equals("ID")){
-				System.out.println("factor ID " + lookahead.getName());
+				// System.out.println("factor ID " + lookahead.getName());
 				temp.value = lookahead.value;
 				
 				if(hasSymbolTable(lookahead.getName())){
+					temp.setValue(lookahead.getName());
+					node oldCurrent = currentNode;
+					currentNode = temp;
+
 					match("ID"); 
-					System.out.println("ID HAS SYMTABLE");
-					temp = factor_r_p();
+					// System.out.println("ID HAS SYMTABLE");
+					factor_r_p();
+					
+					currentNode = oldCurrent;
 					return temp;
 				}
+				temp.setValue(lookahead.getName());
 				match("ID"); 
 				
 
 				return temp; //if is function call this factor_r_p();
 			}else if (first.equals("NUMBER")){
-				temp.value = lookahead.value;
+				// System.out.println("look is:" +lookahead.getName());
+				temp.setValue(lookahead.getName());
 				match("NUMBER");
 				return temp;
 			}else if (first.equals("(")){
@@ -708,6 +1241,7 @@ public class Parser {
 			}else if (first.equals("ID")){
 				return var();
 			}else{
+				// temp.setValue("error on here");
 				return temp;
 			}
 		} else {
@@ -717,42 +1251,61 @@ public class Parser {
 	}
  
 	public node factor_r_p() {
-        System.out.println("factor_r_p");
+        // System.out.println("factor_r_p");
 		String first = checkFIRST("factor_r_p");
 		node temp = new node("factor_r_p");
 		if (first != null) {
 			if (first.equals("(")){
-				match("("); temp = exprseq(); match(")");
+				// temp.setValue("");
+				match("("); temp.setLeft(exprseq()); match(")");
 				return temp;
 			}
 		}
-		System.out.println("factor_r_p first null");
+		// System.out.println("factor_r_p first null");
 		return null;
 	}
 	
 	public node exprseq() {
-        System.out.println("exprseq");
+        // System.out.println("exprseq");
 		String first = checkFIRST("exprseq");
+		node temp = new node("exprseq");
 		if (first != null){
-			expr(); exprseq_r();
+			currentNode.addNode(expr());
+			exprseq_r();
+			return temp;
 		}
 		return null;
 	}
 	
-	public void exprseq_r() {
-        System.out.println("exprseq_r");
+	public node exprseq_r() {
+        // System.out.println("exprseq_r");
 		String first = checkFIRST("exprseq_r");
-		if (first != null)
-			match(","); exprseq();
+		
+		node temp = new node("exprseq_r");
+		temp.setValue("exprseq_r");
+		if (first != null){
+			match(","); 
+			exprseq();
+			return temp;
+		}
+		return null;
+		
 	}
 	
 	public node bexpr() {
-        System.out.println("bexpr");
+        // System.out.println("bexpr");
         String first = checkFIRST("bexpr");
 		// System.out.print(first);
 		node temp = new node("bexpr");
 		if (first != null){
-			temp.setLeft(bterm()); temp.setRight(bterm_r());
+			node l = bterm();
+			node r = bterm_r();
+			if(r == null){
+				temp = l;
+			}else{
+				r.setLeft(l);
+				temp = r;
+			}
 			return temp;
 		}
 		return null;
@@ -760,56 +1313,87 @@ public class Parser {
 	}
 	
 	public node bterm_r() {
-        System.out.println("bterm_r");
+        // System.out.println("bterm_r");
 		String first = checkFIRST("bterm_r");
 		node temp = new node("bterm_r");
 		if (first != null){
-			match("or"); temp.setLeft(bterm()); temp.setRight(bterm_r());
+			match("or"); 
+			temp.setValue("or");
+			node l = bterm();
+			node r = bterm_r();
+			if(r == null){
+				temp.setRight(l);
+			}else{
+				r.setLeft(l);
+				temp.setRight(r);
+			}
 			return temp;
 		}
 		return null;
 	}
 	
 	public node bterm() {
-        System.out.println("bterm");
+        // System.out.println("bterm");
 		String first = checkFIRST("bterm");
 		node temp = new node("bterm");
 		if (first != null){
-			temp.setLeft(bfactor()); temp.setRight(bfactor_r());
+			node l = bfactor();
+			node r = bfactor_r();
+			if(r == null){
+				temp = l;
+			}else{
+				r.setLeft(l);
+				temp = r;
+			}
+			// temp.setLeft(bfactor()); temp.setRight(bfactor_r());
 			return temp;
 		}
 		return null;
 	}
 	
 	public node bfactor_r() {
-        System.out.println("bfactor_r");
+        // System.out.println("bfactor_r");
 		String first = checkFIRST("bfactor_r");
 		node temp = new node("bfactor_r");
 		if (first != null){
-			match("and"); temp.setLeft(bfactor()); temp.setRight(bfactor_r());
+			match("and");
+			temp.setValue("and");
+			node l = bfactor();
+			node r = bfactor_r();
+			if(r == null){
+				temp.setRight(l);
+			}else{
+				r.setLeft(l);
+				temp.setRight(r);
+			}
+			// temp.setLeft(bfactor()); temp.setRight(bfactor_r());
 			return temp;
 		}
 		return null;
 	}
 	
 	public node bfactor() {
-        System.out.println("bfactor");
+        // System.out.println("bfactor");
 		String first = checkFIRST("bfactor");
 		node temp = new node("bfactor");
-		switch (first) {
-			case "(":
-				match("("); temp.setLeft(bfactor_r_p());match(")");
-				return temp;
-			case "not":
-				match("not"); temp.setLeft(bfactor());
-				return temp;
+		if(first != null){
+			switch (first) {
+				case "(":
+					match("("); temp = bfactor_r_p();match(")");
+					return temp;
+				case "not":
+					match("not");
+					temp.setValue("not");
+					temp.setLeft(bfactor());
+					return temp;
+			}
 		}
 		return null;
 	}
 	
 	// Careful
 	public node bfactor_r_p() {
-        System.out.println("bfactor_r_p");
+        // System.out.println("bfactor_r_p");
 		String first = checkFIRST("bfactor_r_p");
 		node temp = new node("bfactor_r_p");
 		if (FIRST.get("bfactor_r_p").contains(first) && token.getRepresentation().equals("COMPARATOR")){
@@ -823,33 +1407,34 @@ public class Parser {
 	}
 	
 	public String comp() {
-        System.out.println("comp");
+        // System.out.println("comp");
         String first = checkFIRST("comp");
         // System.out.println(first);
         if (first != null){
-            // System.out.println("return match");
+			// System.out.println("return match");
+			String c = lookahead.getName();
 			match("COMPARATOR");
-			return lookahead.getName();
+			return c;
 		}
 		return "";
 	}
 	
 	public node var() {
-        System.out.println("var");
+        // System.out.println("var");
 		String first = checkFIRST("var");
 		if (first != null)
 		{
 			currentName = lookahead.getName();
 			
 			if (currentFuncName != null){
-                System.out.println("HERE\n");
+                // System.out.println("HERE\n");
                 // printSymbolTables();
                 // System.out.println("token is:"+  lookahead.getName());
                 if(checkTableName(lookahead.getName()) == false){
 					if(getSymbolTable(currentFuncName).contains(currentName) == false){
 						getSymbolTable(currentFuncName).addSymbol(lookahead);
-						System.out.println("lookahead name:" + currentName);
-						System.out.println("last type:" + getLastType);
+						// System.out.println("lookahead name:" + currentName);
+						// System.out.println("last type:" + getLastType);
 						getSymbolTable(currentFuncName).getSymbol(lookahead.getName()).setType(getLastType);
 					}
                 }
@@ -859,19 +1444,16 @@ public class Parser {
 					getSymbolTable("global").getSymbol(lookahead.getName()).setType(getLastType);
 				}
 			} 
-			System.out.println("HERE AGAIN");
-			System.out.println("1:"+lookahead.getName());
+			node temp = new node("var");
+			temp.setValue(lookahead.getName());
 			match();
-			System.out.println("2:"+lookahead.getName());
-			// match();
-			// var_r();
-			return new node(lookahead.getName());
+			return temp;
 		}
 		return null;
 	}
 	
 	public void var_r() {
-        System.out.println("var_r");
+        // System.out.println("var_r");
 		String first = checkFIRST("var_r");
 		if (first != null){
 			
@@ -915,14 +1497,14 @@ public class Parser {
 	
 	public boolean match() {
         prettyPrint(lookahead.getRepresentation());
-		System.out.println("the dumb function");
+		// System.out.println("the dumb function");
 		consumeToken();
 		return true;
 	}
 	
 	public boolean match(char c) {
-		System.out.println("character tomatch:" + c);
-		System.out.println("character we are matching to:" + lookahead.getRepresentation());
+		// System.out.println("character tomatch:" + c);
+		// System.out.println("character we are matching to:" + lookahead.getRepresentation());
 		boolean isMatch = lookahead.getRepresentation().equals(String.valueOf(c));
         if (isMatch){ 
             prettyPrint(String.valueOf(c));
@@ -945,9 +1527,9 @@ public class Parser {
 	
 	public boolean match(String s) {
 		s = fixComparator(s);
-		System.out.println("string tomatch:" + s);
-		System.out.println("debug:" + lookahead.getName());
-		System.out.println("string we are matching to:" + lookahead.getRepresentation());
+		// System.out.println("string tomatch:" + s);
+		// System.out.println("debug:" + lookahead.getName());
+		// System.out.println("string we are matching to:" + lookahead.getRepresentation());
         boolean isMatch = lookahead.getRepresentation().equals(s);
         // System.out.println(token.getString());
         // System.out.println("MATCHING: " + s + " lookahead:"+lookahead.getRepresentation());
