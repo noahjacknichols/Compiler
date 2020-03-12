@@ -265,6 +265,7 @@ public class Parser {
     private static final List<String> RESERVED = Arrays.asList("if", "fi", "then", "else", "do", "od", "def", "fed",
     "int", "double", "print", "return", "or", "and", "not", "while");
 	private lex lexer = new lex();
+	
 	private token lookahead = null;
 	private token token = null;
     private static Hashtable<String, List<String>> FIRST = new Hashtable<String, List<String>>();
@@ -366,12 +367,14 @@ public class Parser {
 
     public static void main(String[] args) throws IOException {
 		Parser parser = new Parser();
+		
     }
     public Parser() throws IOException {
         initializeFIRST();
         initializeFOLLOW();
         consumeToken();
-        consumeToken(); // Twice to initialize token & lookahead
+		consumeToken(); // Twice to initialize token & lookahead
+		
 		
 		
 		node start = program();
@@ -380,8 +383,8 @@ public class Parser {
 		
 		
 		// System.out.println("\nValid Parse: " + validParse);
-		System.out.println("successful parse.");
-		System.out.println("-----------------------");
+		System.out.println("\nsuccessful parse.");
+		System.out.println("-------------------------");
 		if(start !=null){
 			eval(start);
 		}
@@ -401,23 +404,27 @@ public class Parser {
 	}
 	public node doStatement(node state, node start){
 		node toReturn = null;
+		// System.out.println("state:" +state.getValue());
 		if(state.getValue().equals("=")){
 			//set variable = num in symtable
 			String x = evalExpr(state.getRight(),start);
 			start.nodeTable.setValue(state.getLeft().getValue(), x);
 
 		}else if(state.getValue().equals("IF")){
-			printTree(state.getLeft());
+			// printTree(state.getLeft());
 			if(evalCond(state.getLeft(), start)){
 				//do those statements
 				for(int i = 0; i < state.nodes.size(); i++){
+					// System.out.println("doing if state");
 					node x = doStatement(state.nodes.get(i), start);
 					if(x != null){
 						return x;
 					}
 				}
 			}else{
+				// System.out.println("else");
 				if(state.getRight() != null){
+					// System.out.println("right is:" +state.getRight().getValue());
 					if(state.getRight().nodes.size() > 0){
 						for(int i = 0; i < state.getRight().nodes.size(); i++){
 							node x = doStatement(state.getRight().nodes.get(i), start);
@@ -426,6 +433,8 @@ public class Parser {
 							}
 						}
 					}
+				}else{
+					// System.out.println("no else");
 				}
 			}
 		}else if(state.getValue().equals("WHILE")){			
@@ -470,6 +479,8 @@ public class Parser {
 		if(state.getValue().equals("<")){
 			String l = evalExpr(state.getLeft(), start);
 			String r = evalExpr(state.getRight(), start);
+			// System.out.println("l:" + l + ",r:" + r);
+			// r = "0";
 			if(isInt(l) && isInt(r)){return (Integer.parseInt(l) < Integer.parseInt(r)); }
 			else if(isDouble(l) && isDouble(r)){return (Double.parseDouble(l) < Double.parseDouble(r));}
 			else{raiseError();}
@@ -501,8 +512,10 @@ public class Parser {
 			else if(isDouble(l) && isDouble(r)){return (Double.parseDouble(l) == Double.parseDouble(r));}
 			else{raiseError();}
 		}else if(state.getValue().equals("<>")){
+			
 			String l = evalExpr(state.getLeft(), start);
 			String r = evalExpr(state.getRight(), start);
+			// System.out.println("l:" + l + ",r:" + r);
 			if(isInt(l) && isInt(r)){return (Integer.parseInt(l) != Integer.parseInt(r)); }
 			else if(isDouble(l) && isDouble(r)){return (Double.parseDouble(l) != Double.parseDouble(r));}
 			else{raiseError();}
@@ -597,26 +610,35 @@ public class Parser {
 				else if(isDouble(left) && isDouble(right)){return ""+ (Double.parseDouble(left) % Double.parseDouble(right));}
 				else{raiseError();}
 			}
+		}else if(isInt(state.getValue()) || isDouble(state.getValue())){
+			return state.getValue();
+
 
 		}else if(findFunctionNode(state.getValue())!= null){
 			symbolTable funcTable = getSymbolTable(state.getValue());
 			ArrayList<String> params = funcTable.getParameters();
 			if(params.size() != state.nodes.size()){
+				// System.out.println("not even number of params");
 				raiseError();
 			}
+			// System.out.println("func cal");
+			// System.out.println(params);
 			for(int i = 0; i < state.nodes.size(); i++){
+				// System.out.println(evalExpr(state.nodes.get(i),start));
 				funcTable.setValue(params.get(i),evalExpr(state.nodes.get(i), start));
 			}
 			node newNode = findFunctionNode(state.getValue());
-			newNode.nodeTable = funcTable;
 
-			return evalExpr(eval(newNode), newNode);
-		}
-		else if(start.nodeTable.contains(state.getValue())){
+			newNode.nodeTable = funcTable;
+			String x = evalExpr(eval(newNode), state);
+			// System.out.println("x is:" + x);
+			return x;
+		}else if(start.nodeTable.contains(state.getValue())){
 			return start.nodeTable.getSymbol(state.getValue()).value;
 
-		}else if(isInt(state.getValue()) || isDouble(state.getValue())){
-			return state.getValue();
+
+		}else{
+			raiseError();
 		}
 		return "";
 	}
@@ -656,6 +678,7 @@ public class Parser {
 	}
 
 	public void raiseError(){
+		System.out.println("Error occurred.");
 		System.exit(0);
 	}
 
@@ -1020,7 +1043,7 @@ public class Parser {
 			}else{
 				temp.setValue(lookahead.getName());
 				match();
-				raiseError();
+				// raiseError();
 				return temp; 
 			}
 		} else { //Epsilon
@@ -1384,7 +1407,7 @@ public class Parser {
             prettyPrint(String.valueOf(c));
             consumeToken();
         }else{
-			System.exit(0);
+			raiseError();
 		}
 		return isMatch;
 	}
@@ -1412,7 +1435,7 @@ public class Parser {
 			
 			consumeToken();
 		}else{
-			System.exit(0);
+			raiseError();
 		}
 		return isMatch;
     }
@@ -1532,6 +1555,7 @@ class lex {
 				allTokens.add(temp_tk);
 				// reached EOF
 		}
+		printTokens();
 		// parse();
 		//no longer need to parse into HTML
 		// encodeHTML(allTokens, symTable);
@@ -1695,18 +1719,23 @@ class lex {
 			}else if(c == '.'){
 				//fix this garbage tmrw
 				digitBuffer = digitBuffer + c;
+				System.in.mark(10000);
 				c = readNextChar();
+				System.out.println(c);
 				while(isDigit(c)){
+					System.out.println("here");
 					digitBuffer = digitBuffer + c;
 					System.in.mark(10000);
 					c = readNextChar();
 				}
 				if(c != 'E' && c!='e' && isLetter(c)){
+					System.out.println("fails here");
+
 					return new token(digitBuffer, "ERROR");
 				}
 				else {
 					// System.out.println("c is:" + c);
-					if(c == 'E' || c=='e' || isLetter(c) != true){
+					if(c == 'E' || c=='e'){
 					digitBuffer =digitBuffer + c;
 					System.in.mark(10000);
 					c=readNextChar();
@@ -1719,9 +1748,13 @@ class lex {
 
 					System.in.reset();
 
-					return new token(digitBuffer, "FLOAT");
+					return new token(digitBuffer, "DOUBLE");
 					}else{
 						// System.out.println("wrong else");
+						if(c == ';'){
+							System.in.reset();
+							return new token(digitBuffer, "DOUBLE");
+						}
 						System.in.reset();
 						return new token(digitBuffer, "ERROR");
 					}
