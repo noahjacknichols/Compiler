@@ -1555,7 +1555,7 @@ class lex {
 				allTokens.add(temp_tk);
 				// reached EOF
 		}
-		printTokens();
+		// printTokens();
 		// parse();
 		//no longer need to parse into HTML
 		// encodeHTML(allTokens, symTable);
@@ -1709,7 +1709,7 @@ class lex {
 			// System.out.println("c is now:" + (char) c);
 			if(c != 'E' && c != 'e' && isLetter(c)){
 				//Invalid Integer
-				System.out.println("I shouldn't be here");
+				// System.out.println("I shouldn't be here");
 				return new token(digitBuffer+c, "ERROR");
 			}else if(c != '.'){
 				//its not a floating point number, and is valid
@@ -1721,9 +1721,9 @@ class lex {
 				digitBuffer = digitBuffer + c;
 				System.in.mark(10000);
 				c = readNextChar();
-				System.out.println(c);
+				// System.out.println(c);
 				while(isDigit(c)){
-					System.out.println("here");
+					// System.out.println("here");
 					digitBuffer = digitBuffer + c;
 					System.in.mark(10000);
 					c = readNextChar();
